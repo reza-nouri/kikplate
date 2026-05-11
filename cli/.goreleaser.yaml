@@ -1,0 +1,51 @@
+version: 2
+
+project_name: kikplate
+
+before:
+  hooks:
+    - sh -c "cd cli && go mod tidy"
+
+builds:
+  - id: cli
+    dir: cli
+    main: .
+    binary: "kikplate-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: cli-archives
+    ids:
+      - cli
+    formats: [tar.gz]
+    name_template: "{{ .Binary }}"
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+brews:
+  - name: kikplate
+    url_template: "https://github.com/kikplate/kikplate/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    repository:
+      owner: kikplate
+      name: homebrew-kikplate
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_author:
+      name: github-actions[bot]
+      email: 41898282+github-actions[bot]@users.noreply.github.com
+    directory: Formula
+    homepage: "https://github.com/kikplate/kikplate"
+    description: "Command-line interface for the Kikplate plate registry"
+    license: "Apache-2.0"
+
+release:
+  disable: true
