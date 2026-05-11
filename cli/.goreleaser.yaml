@@ -19,6 +19,17 @@ builds:
     goarch:
       - amd64
       - arm64
+  - id: cli-linux-package
+    dir: cli
+    main: .
+    binary: kikplate
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
   - id: cli-windows
     dir: cli
     main: .
@@ -81,6 +92,22 @@ scoops:
     description: "Command-line interface for the Kikplate plate registry"
     license: "Apache-2.0"
     url_template: "https://github.com/kikplate/kikplate/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+
+nfpms:
+  - id: linux-packages
+    ids:
+      - cli-linux-package
+    package_name: kikplate
+    file_name_template: "{{ .PackageName }}_{{ .Version }}_{{ .Arch }}"
+    vendor: Kikplate
+    homepage: "https://github.com/kikplate/kikplate"
+    maintainer: "Kikplate Maintainers <opensource@kikplate.dev>"
+    description: "Command-line interface for the Kikplate plate registry"
+    license: Apache-2.0
+    formats:
+      - deb
+      - rpm
+    bindir: /usr/bin
 
 release:
   disable: true
