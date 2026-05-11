@@ -201,22 +201,34 @@ jobs:
           go-version-file: cli/go.mod
           cache-dependency-path: cli/go.sum
 
-      - name: Build CLI binaries and package tarballs
+      - name: Build CLI binaries and package archives
         run: |
           mkdir -p ./dist
           version="${{ needs.prepare-release-metadata.outputs.version }}"
 
-          for os in darwin linux; do
+          for os in darwin linux windows; do
             for arch in amd64 arm64; do
+              if [ "$os" = "windows" ] && [ "$arch" != "amd64" ]; then
+                continue
+              fi
               bin="kikplate-${version}-${os}-${arch}"
-              CGO_ENABLED=0 GOOS="${os}" GOARCH="${arch}" go build -o "./dist/${bin}" ./
-              tar -C ./dist -czf "./dist/${bin}.tar.gz" "${bin}"
+              out="./dist/${bin}"
+              if [ "$os" = "windows" ]; then
+                out="${out}.exe"
+              fi
+              CGO_ENABLED=0 GOOS="${os}" GOARCH="${arch}" go build -o "${out}" ./
+              if [ "$os" = "windows" ]; then
+                (cd ./dist && zip -q "${bin}.zip" "$(basename "${out}")")
+              else
+                tar -C ./dist -czf "./dist/${bin}.tar.gz" "${bin}"
+              fi
               rm -f "./dist/${bin}"
+              rm -f "./dist/${bin}.exe"
             done
           done
 
           cd ./dist
-          shasum -a 256 *.tar.gz > checksums.txt
+          shasum -a 256 *.tar.gz *.zip > checksums.txt
 
       - name: Upload CLI release artifacts
         uses: actions/upload-artifact@v4
@@ -224,6 +236,7 @@ jobs:
           name: release-cli-artifacts
           path: |
             cli/dist/*.tar.gz
+            cli/dist/*.zip
             cli/dist/checksums.txt
 
   publish-release:
@@ -278,4 +291,5 @@ jobs:
           generate_release_notes: false
           files: |
             release-assets/*.tar.gz
+            release-assets/*.zip
             release-assets/checksums.txt
