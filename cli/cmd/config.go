@@ -81,7 +81,7 @@ var configInitCmd = &cobra.Command{
 		}
 		defaultCfg := CLIConfig{
 			Server: ServerConfig{
-				Address: "http://localhost:3001",
+				Address: "https://kikplate.dev/api",
 			},
 		}
 		data, err := yaml.Marshal(&defaultCfg)

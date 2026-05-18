@@ -31,12 +31,12 @@ export function Footer() {
               The biggest library of production-ready project templates and boilerplates.
             </p>
             <Link
-              href="https://www.gnu.org/licenses/agpl-3.0.html"
+              href="https://www.apache.org/licenses/LICENSE-2.0"
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
             >
-              AGPL-3.0 License
+              Apache 2.0 License
             </Link>
           </div>
 
@@ -116,7 +116,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="https://github.com/kikplate/kikplate/blob/main/CONTRIBUTING.md"
+                  href="https://github.com/kikplate/kikplate/blob/main/docs/contributing.md"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"

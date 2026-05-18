@@ -7,7 +7,7 @@ The Kikplate CLI (`kikplate`) is a standalone Go binary that lets you browse, su
 ### macOS/Linux via Homebrew tap
 
 ```
-brew tap kikplate/homebrew-kikplate
+brew tap kikplate/kikplate
 brew install kikplate
 ```
 

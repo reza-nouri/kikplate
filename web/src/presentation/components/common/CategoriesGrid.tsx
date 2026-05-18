@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { getPlateCategoryIcon } from "@/src/presentation/utils/plateCategoryIcons"
 import type { PlateCategory } from "@/src/domain/entities/Config"
 
+
 interface Props {
   categories: PlateCategory[]
 }
@@ -50,9 +51,9 @@ export function CategoriesGrid({ categories }: Props) {
                 </div>
               </button>
             )
+            
           })}
         </div>
-
       </div>
     </section>
   )

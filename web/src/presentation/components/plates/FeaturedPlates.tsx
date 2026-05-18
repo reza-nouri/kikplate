@@ -133,13 +133,13 @@ export function FeaturedPlates() {
               Use the KikPlate CLI to search, scaffold and manage plates directly from your terminal.
             </p>
             <div className="mt-5 border border-border bg-background p-4 font-mono text-sm text-muted-foreground">
-              <p><span className="text-foreground/50">$</span> kikplate search golang</p>
-              <p className="mt-1"><span className="text-foreground/50">$</span> kikplate scaf go-clean-arch</p>
+              <p><span className="text-foreground/50">$</span> kikplate search --name golang</p>
+              <p className="mt-1"><span className="text-foreground/50">$</span> kikplate scaffold go-clean-arch</p>
               <p className="mt-1"><span className="text-foreground/50">$</span> kikplate describe my-plate</p>
             </div>
             <div className="mt-6">
               <Link
-                href="https://github.com/kikplate/kikplate/tree/main/cli"
+                href="/docs?doc=cli"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
