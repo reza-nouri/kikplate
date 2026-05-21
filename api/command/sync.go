@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kickplate/api/events"
 	"github.com/kickplate/api/lib"
 	"github.com/kickplate/api/model"
 	"github.com/kickplate/api/repository"
@@ -31,6 +32,9 @@ func (c *SyncCommand) Run() lib.CommandRunner {
 		logger lib.Logger,
 		plateRepo repository.PlateRepository,
 		plateTagRepo repository.PlateTagRepository,
+		accountRepo repository.AccountRepository,
+		userRepo repository.UserRepository,
+		emitter *events.EventEmitter,
 	) {
 		pollEvery := parseDurationWithFallback(env.SyncPollInterval, 30*time.Second)
 		defaultSyncInterval := parseDurationWithFallback(env.SyncInterval, 6*time.Hour)
@@ -53,7 +57,7 @@ func (c *SyncCommand) Run() lib.CommandRunner {
 					if p == nil {
 						continue
 					}
-					syncOnePlate(ctx, logger, plateRepo, plateTagRepo, env, p, defaultSyncInterval)
+					syncOnePlate(ctx, logger, plateRepo, plateTagRepo, accountRepo, userRepo, emitter, env, p, defaultSyncInterval)
 				}
 			}
 
@@ -67,6 +71,9 @@ func syncOnePlate(
 	logger lib.Logger,
 	plateRepo repository.PlateRepository,
 	plateTagRepo repository.PlateTagRepository,
+	accountRepo repository.AccountRepository,
+	userRepo repository.UserRepository,
+	emitter *events.EventEmitter,
 	env lib.Env,
 	plate *model.Plate,
 	defaultSyncInterval time.Duration,
@@ -87,6 +94,25 @@ func syncOnePlate(
 		if err := plateRepo.Update(ctx, plate); err != nil {
 			logger.Warnf("sync: failed to update visibility for plate %s: %v", plate.ID, err)
 		}
+	}
+
+	emitSyncIssue := func(issue string) {
+		if emitter == nil {
+			return
+		}
+		account, err := accountRepo.GetByID(ctx, plate.OwnerID)
+		if err != nil || account == nil || account.UserID == nil {
+			return
+		}
+		user, err := userRepo.GetByID(ctx, *account.UserID)
+		if err != nil || user == nil || strings.TrimSpace(user.Email) == "" {
+			return
+		}
+		emitter.Emit(events.PlateSyncIssue, events.PlateSyncIssuePayload{
+			Email:     user.Email,
+			PlateName: plate.Name,
+			Issue:     issue,
+		})
 	}
 
 	syncing := model.SyncStatusSyncing
@@ -118,6 +144,7 @@ func syncOnePlate(
 			IsVerified:          isVerified,
 			VerifiedAt:          nil,
 		})
+		emitSyncIssue(errMsg)
 		logger.Warnf("sync: skipped plate %s (%s)", plate.ID, errMsg)
 		return
 	}
@@ -137,6 +164,7 @@ func syncOnePlate(
 			IsVerified:          isVerified,
 			VerifiedAt:          nil,
 		})
+		emitSyncIssue(errText)
 		logger.Warnf("sync: plate %s failed: %v", plate.ID, err)
 		return
 	}
@@ -189,6 +217,7 @@ func syncOnePlate(
 			VerifiedAt:          verifiedAt,
 		})
 		setVisibility(desiredVisibility)
+		emitSyncIssue(errText)
 		logger.Warnf("sync: plate %s failed: %s", plate.ID, errText)
 		return
 	}
@@ -211,6 +240,7 @@ func syncOnePlate(
 				Metadata:            metadataJSON,
 			})
 			setVisibility(desiredVisibility)
+			emitSyncIssue(errText)
 			logger.Warnf("sync: plate %s failed: %s", plate.ID, errText)
 			return
 		}
@@ -231,6 +261,9 @@ func syncOnePlate(
 	}
 
 	setVisibility(desiredVisibility)
+	if syncError != nil {
+		emitSyncIssue(*syncError)
+	}
 
 	logger.Infof("sync: plate %s status=%s next=%s", plate.ID, syncStatus, nextSync.Format(time.RFC3339))
 }

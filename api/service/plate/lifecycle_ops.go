@@ -3,9 +3,11 @@ package plate
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kickplate/api/events"
 	"github.com/kickplate/api/lib"
 	"github.com/kickplate/api/model"
 	"gorm.io/gorm"
@@ -170,7 +172,11 @@ func (s *plateService) SetBookmark(ctx context.Context, plateID uuid.UUID, accou
 		}); err != nil {
 			return err
 		}
-		return s.plates.IncrementBookmarkCount(ctx, plateID)
+		if err := s.plates.IncrementBookmarkCount(ctx, plateID); err != nil {
+			return err
+		}
+		s.emitBookmarkLikeEvent(ctx, plateID, accountID)
+		return nil
 	}
 
 	wasBookmarked := member.IsBookmarked
@@ -183,10 +189,49 @@ func (s *plateService) SetBookmark(ctx context.Context, plateID uuid.UUID, accou
 	}
 
 	if bookmarked {
-		return s.plates.IncrementBookmarkCount(ctx, plateID)
+		if err := s.plates.IncrementBookmarkCount(ctx, plateID); err != nil {
+			return err
+		}
+		s.emitBookmarkLikeEvent(ctx, plateID, accountID)
+		return nil
 	} else {
 		return s.plates.DecrementBookmarkCount(ctx, plateID)
 	}
+}
+
+func (s *plateService) emitBookmarkLikeEvent(ctx context.Context, plateID uuid.UUID, likedByAccountID uuid.UUID) {
+	plate, err := s.plates.GetByID(ctx, plateID)
+	if err != nil || plate == nil || plate.OwnerID == likedByAccountID {
+		return
+	}
+
+	ownerAccount, err := s.accounts.GetByID(ctx, plate.OwnerID)
+	if err != nil || ownerAccount == nil || ownerAccount.UserID == nil {
+		return
+	}
+
+	ownerUser, err := s.users.GetByID(ctx, *ownerAccount.UserID)
+	if err != nil || ownerUser == nil || strings.TrimSpace(ownerUser.Email) == "" {
+		return
+	}
+
+	likedBy := "Someone"
+	likedByAccount, err := s.accounts.GetByID(ctx, likedByAccountID)
+	if err == nil && likedByAccount != nil {
+		if likedByAccount.DisplayName != nil && strings.TrimSpace(*likedByAccount.DisplayName) != "" {
+			likedBy = strings.TrimSpace(*likedByAccount.DisplayName)
+		} else if likedByAccount.UserID != nil {
+			likedByUser, userErr := s.users.GetByID(ctx, *likedByAccount.UserID)
+			if userErr == nil && likedByUser != nil && strings.TrimSpace(likedByUser.Username) != "" {
+				likedBy = strings.TrimSpace(likedByUser.Username)
+			}
+		}
+	}
+
+	s.emitter.Emit(events.UserLiked, events.UserLikedPayload{
+		Email:   ownerUser.Email,
+		LikedBy: likedBy,
+	})
 }
 
 func (s *plateService) GetMember(ctx context.Context, plateID uuid.UUID, accountID uuid.UUID) (*model.PlateMember, error) {

@@ -85,6 +85,8 @@ func (s *plateService) VerifyRepository(ctx context.Context, plateID uuid.UUID, 
 		return nil, err
 	}
 
+	s.emitPlateVerifiedEvent(ctx, plate)
+
 	s.logger.Infof("plate verified and published: %s", plate.ID)
 	return plate, nil
 }

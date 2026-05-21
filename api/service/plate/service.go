@@ -1,6 +1,7 @@
 package plate
 
 import (
+	"github.com/kickplate/api/events"
 	"github.com/kickplate/api/lib"
 	"github.com/kickplate/api/repository"
 	"gorm.io/gorm"
@@ -30,6 +31,7 @@ type plateService struct {
 	users        repository.UserRepository
 	reviews      repository.PlateReviewRepository
 	logger       lib.Logger
+	emitter      *events.EventEmitter
 }
 
 func NewPlateService(
@@ -45,6 +47,7 @@ func NewPlateService(
 	users repository.UserRepository,
 	reviews repository.PlateReviewRepository,
 	logger lib.Logger,
+	emitter *events.EventEmitter,
 ) PlateService {
 	return &plateService{
 		db:           db.DB,
@@ -59,6 +62,7 @@ func NewPlateService(
 		users:        users,
 		reviews:      reviews,
 		logger:       logger,
+		emitter:      emitter,
 	}
 }
 
@@ -87,5 +91,6 @@ func NewPlateServiceForTest(
 		users:        users,
 		reviews:      reviews,
 		logger:       logger,
+		emitter:      events.NewEventEmitter(),
 	}
 }

@@ -139,5 +139,7 @@ func (s *plateService) SubmitRepository(ctx context.Context, accountID uuid.UUID
 		}
 	}
 
+	s.emitPlateSubmittedEvent(ctx, plate)
+
 	return plate, nil
 }

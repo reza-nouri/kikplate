@@ -3,18 +3,15 @@ package auth
 import (
 	"context"
 	"crypto/sha256"
-	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net"
-	"net/smtp"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/kickplate/api/events"
 	"github.com/kickplate/api/lib"
 	"github.com/kickplate/api/model"
 	"github.com/kickplate/api/repository"
@@ -31,6 +28,7 @@ type authService struct {
 	logger       lib.Logger
 	env          lib.Env
 	db           *gorm.DB
+	emitter      *events.EventEmitter
 }
 
 func NewAuthService(
@@ -40,6 +38,7 @@ func NewAuthService(
 	db lib.Database,
 	logger lib.Logger,
 	env lib.Env,
+	emitter *events.EventEmitter,
 ) AuthService {
 	return &authService{
 		userRepo:     userRepo,
@@ -48,6 +47,7 @@ func NewAuthService(
 		logger:       logger,
 		env:          env,
 		db:           db.DB,
+		emitter:      emitter,
 	}
 }
 
@@ -86,6 +86,10 @@ func (s *authService) Register(ctx context.Context, input RegisterInput) error {
 	}
 
 	if !s.env.EmailVerification.Enabled {
+		s.emitter.Emit(events.UserRegistered, events.UserRegisteredPayload{
+			Email: user.Email,
+			Name:  user.Username,
+		})
 		return nil
 	}
 
@@ -115,39 +119,18 @@ func (s *authService) Register(ctx context.Context, input RegisterInput) error {
 		return err
 	}
 
-	if err := s.sendVerificationEmail(input.Email, rawToken); err != nil {
-		s.logger.Errorf("failed sending verification email to %s: %v", input.Email, err)
-		return ErrVerificationEmailFailed
-	}
-
-	return nil
-}
-
-func (s *authService) sendVerificationEmail(recipientEmail, rawToken string) error {
 	verifyURL, err := s.buildVerificationURL(rawToken)
 	if err != nil {
 		return err
 	}
 
-	subject := "Verify your Kikplate account"
-	body := fmt.Sprintf("Welcome to Kikplate!\n\nPlease verify your email by opening this link:\n%s\n\nIf you did not request this account, you can ignore this email.", verifyURL)
+	s.emitter.Emit(events.UserVerificationRequested, events.UserVerificationRequestedPayload{
+		Email:     input.Email,
+		Name:      input.Username,
+		VerifyURL: verifyURL,
+	})
 
-	from := s.env.SMTP.FromEmail
-	if s.env.SMTP.FromName != "" {
-		from = fmt.Sprintf("%s <%s>", s.env.SMTP.FromName, s.env.SMTP.FromEmail)
-	}
-
-	message := strings.Join([]string{
-		fmt.Sprintf("From: %s", from),
-		fmt.Sprintf("To: %s", recipientEmail),
-		fmt.Sprintf("Subject: %s", subject),
-		"MIME-Version: 1.0",
-		"Content-Type: text/plain; charset=UTF-8",
-		"",
-		body,
-	}, "\r\n")
-
-	return sendSMTPMail(s.env.SMTP, s.env.SMTP.FromEmail, []string{recipientEmail}, []byte(message))
+	return nil
 }
 
 func (s *authService) buildVerificationURL(rawToken string) (string, error) {
@@ -166,89 +149,6 @@ func (s *authService) buildVerificationURL(rawToken string) (string, error) {
 	parsed.RawQuery = query.Encode()
 
 	return parsed.String(), nil
-}
-
-func sendSMTPMail(cfg lib.SMTPConfig, from string, to []string, message []byte) error {
-	if !cfg.IsConfigured() {
-		return ErrSMTPNotConfigured
-	}
-
-	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
-	tlsConfig := &tls.Config{ServerName: cfg.Host}
-
-	var (
-		client *smtp.Client
-		err    error
-	)
-
-	if cfg.UseStartTL {
-		conn, dialErr := net.Dial("tcp", addr)
-		if dialErr != nil {
-			return dialErr
-		}
-
-		client, err = smtp.NewClient(conn, cfg.Host)
-		if err != nil {
-			_ = conn.Close()
-			return err
-		}
-
-		if ok, _ := client.Extension("STARTTLS"); ok {
-			if err := client.StartTLS(tlsConfig); err != nil {
-				_ = client.Close()
-				return err
-			}
-		}
-	} else {
-		tlsConn, dialErr := tls.Dial("tcp", addr, tlsConfig)
-		if dialErr != nil {
-			return dialErr
-		}
-
-		client, err = smtp.NewClient(tlsConn, cfg.Host)
-		if err != nil {
-			_ = tlsConn.Close()
-			return err
-		}
-	}
-
-	defer client.Close()
-
-	auth := smtp.PlainAuth("", cfg.Username, cfg.Password, cfg.Host)
-	if ok, _ := client.Extension("AUTH"); ok {
-		if err := client.Auth(auth); err != nil {
-			return err
-		}
-	}
-
-	if err := client.Mail(from); err != nil {
-		return err
-	}
-	for _, recipient := range to {
-		if err := client.Rcpt(recipient); err != nil {
-			return err
-		}
-	}
-
-	writer, err := client.Data()
-	if err != nil {
-		return err
-	}
-
-	if _, err := writer.Write(message); err != nil {
-		_ = writer.Close()
-		return err
-	}
-
-	if err := writer.Close(); err != nil {
-		return err
-	}
-
-	if err := client.Quit(); err != nil && !errors.Is(err, net.ErrClosed) {
-		return err
-	}
-
-	return nil
 }
 
 func (s *authService) VerifyEmail(ctx context.Context, rawToken string) (*AuthResult, error) {
@@ -274,6 +174,11 @@ func (s *authService) VerifyEmail(ctx context.Context, rawToken string) (*AuthRe
 	if err := s.emailVerRepo.MarkUsed(ctx, ev.ID); err != nil {
 		return nil, err
 	}
+
+	s.emitter.Emit(events.UserRegistered, events.UserRegisteredPayload{
+		Email: user.Email,
+		Name:  user.Username,
+	})
 
 	account, err := s.findOrCreateLocalAccount(ctx, user.ID)
 	if err != nil {

@@ -41,6 +41,8 @@ func (s *plateService) SubmitReview(ctx context.Context, plateID uuid.UUID, acco
 		return nil, err
 	}
 
+	s.emitPlateRatedEvent(ctx, p, accountID, input.Rating)
+
 	reviews, err := s.reviews.ListByPlate(ctx, plateID)
 	if err == nil && len(reviews) > 0 {
 		sum := 0
