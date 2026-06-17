@@ -1,0 +1,39 @@
+package {{ .packageName }}.bootstrap;
+
+import {{ .packageName }}.todo.model.Todo;
+import {{ .packageName }}.todo.repository.TodoRepository;
+import java.time.Instant;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.stereotype.Component;
+
+@Component
+public class SeedDataLoader implements CommandLineRunner {
+
+    private final TodoRepository repository;
+
+    public SeedDataLoader(TodoRepository repository) {
+        this.repository = repository;
+    }
+
+    @Override
+    public void run(String... args) {
+        if (repository.count() > 0) {
+            return;
+        }
+
+        Todo first = new Todo();
+        first.setTitle("Welcome to {{ .appName }}");
+        first.setCompleted(false);
+        first.setCreatedAt(Instant.now());
+        first.setUpdatedAt(Instant.now());
+
+        Todo second = new Todo();
+        second.setTitle("Generated from plate {{ .projectName }}");
+        second.setCompleted(false);
+        second.setCreatedAt(Instant.now());
+        second.setUpdatedAt(Instant.now());
+
+        repository.save(first);
+        repository.save(second);
+    }
+}

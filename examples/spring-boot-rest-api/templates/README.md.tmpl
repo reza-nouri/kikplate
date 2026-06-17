@@ -1,0 +1,34 @@
+# {{ .projectName }}
+
+{{ .appName }} built with Spring Boot.
+
+## Stack
+
+Spring Boot 3
+Spring Web
+Spring Data JPA
+Bean Validation
+{{ if eq .database "postgres" }}PostgreSQL{{ else }}H2{{ end }}
+{{ if .modules.swagger.enabled }}Springdoc OpenAPI{{ end }}
+
+## Run
+
+```bash
+./mvnw spring-boot:run
+```
+
+## API
+
+Base URL: http://localhost:{{ .serverPort }}
+
+Endpoints:
+
+GET /api/v1/todos
+GET /api/v1/todos/{id}
+POST /api/v1/todos
+PUT /api/v1/todos/{id}
+DELETE /api/v1/todos/{id}
+
+{{ if .modules.swagger.enabled }}
+Swagger UI: http://localhost:{{ .serverPort }}/swagger-ui.html
+{{ end }}

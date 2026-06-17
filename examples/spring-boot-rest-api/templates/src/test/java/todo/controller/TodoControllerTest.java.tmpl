@@ -1,0 +1,60 @@
+package {{ .packageName }}.todo.controller;
+
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import {{ .packageName }}.todo.dto.CreateTodoRequest;
+import {{ .packageName }}.todo.dto.TodoResponse;
+import {{ .packageName }}.todo.service.TodoService;
+import java.time.Instant;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
+@WebMvcTest(TodoController.class)
+class TodoControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockBean
+    private TodoService service;
+
+    @Test
+    void shouldListTodos() throws Exception {
+        TodoResponse response = new TodoResponse(1L, "Write tests", false, Instant.now(), Instant.now());
+        when(service.getAll()).thenReturn(List.of(response));
+
+        mockMvc.perform(get("{{ .apiBasePath }}/todos"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].id").value(1L))
+            .andExpect(jsonPath("$[0].title").value("Write tests"));
+    }
+
+    @Test
+    void shouldCreateTodo() throws Exception {
+        CreateTodoRequest request = new CreateTodoRequest();
+        request.setTitle("Ship API");
+
+        TodoResponse response = new TodoResponse(10L, "Ship API", false, Instant.now(), Instant.now());
+        when(service.create(org.mockito.ArgumentMatchers.any(CreateTodoRequest.class))).thenReturn(response);
+
+        mockMvc.perform(post("{{ .apiBasePath }}/todos")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").value(10L))
+            .andExpect(jsonPath("$.title").value("Ship API"));
+    }
+}

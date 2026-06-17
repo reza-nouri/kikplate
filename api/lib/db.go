@@ -167,6 +167,7 @@ func NewDatabase(env Env, logger Logger) Database {
 		&model.PlateReview{},
 		&model.Badge{},
 		&model.PlateBadge{},
+		&model.Generation{},
 	); err != nil {
 		logger.Panicf("AutoMigrate failed: %v", err)
 	}

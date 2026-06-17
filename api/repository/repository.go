@@ -174,3 +174,10 @@ type OrganizationRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	CountPlates(ctx context.Context, orgID uuid.UUID) (int, error)
 }
+
+type GenerationRepository interface {
+	Create(ctx context.Context, gen *model.Generation) error
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Generation, error)
+	UpdateStatus(ctx context.Context, id uuid.UUID, status model.GenerationStatus, errMsg *string) error
+	ListByAccount(ctx context.Context, accountID uuid.UUID, limit, offset int) ([]*model.Generation, int, error)
+}

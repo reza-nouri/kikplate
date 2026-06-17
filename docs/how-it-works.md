@@ -184,3 +184,85 @@ kikplate scaffold myorg/my-template https://github.com/you/new-repo.git
 ```
 
 This creates a clean initial commit and pushes to the remote.
+
+## Generating a Project
+
+Generation is schema driven. Instead of cloning a repository as is, Kikplate resolves a plate schema, validates input values, renders templates, and returns a zip archive.
+
+### Endpoints
+
+```
+GET /generate/{slug}/schema
+POST /generate/{slug}
+```
+
+`GET /generate/{slug}/schema` returns the generation contract for a plate.
+
+`POST /generate/{slug}` accepts:
+
+```json
+{
+  "values": {
+    "projectName": "my-app",
+    "modulePath": "github.com/you/my-app",
+    "modules.docker.enabled": true
+  }
+}
+```
+
+The response body is `application/zip` and includes `X-Generation-ID` in headers.
+
+### Value Handling
+
+Schema defaults are applied automatically.
+
+Required fields are enforced before rendering.
+
+Types are validated and coerced for common scalar types.
+
+Supported scalar types include `string`, `bool`, `int`, `number`, and `enum`.
+
+### Conditional Files
+
+Each file entry in `plate.yaml` can include `condition`.
+
+Conditions support dotted lookups and boolean expressions with `!`, `&&`, `||`, `==`, and `!=`.
+
+Examples:
+
+```yaml
+condition: modules.docker.enabled
+condition: database == postgres
+condition: modules.auth.enabled && database != none
+```
+
+### Template Helpers
+
+Templates can use helper functions:
+
+`lower`
+
+`upper`
+
+`trim`
+
+`replace`
+
+`default`
+
+`slugify`
+
+Example:
+
+```gotemplate
+module {{ .modulePath | default "github.com/acme/app" }}
+image: {{ slugify .projectName }}
+```
+
+### Output Safety
+
+Rendered file paths are normalized before archiving.
+
+Absolute paths and parent directory traversal are rejected.
+
+This prevents unsafe output entries inside generated archives.

@@ -254,6 +254,45 @@ Optional flags:
 | `--local` | Force scaffold to local directory even if a URL-shaped argument is given |
 | `--force` | Overwrite a remote that was already scaffolded from a kikplate plate |
 
+## Generating a Project
+
+Generation renders files from a plate schema and values, then writes output locally or pushes to a remote repository.
+
+### Generate from Registry Plate
+
+```
+kikplate generate myorg/go-http-server --set projectName=my-app --set modulePath=github.com/you/my-app
+```
+
+### Generate from Local Plate Directory
+
+```
+kikplate generate --template ./example-plate --set projectName=my-app --set modulePath=github.com/you/my-app
+```
+
+### Generate with Values File
+
+```
+kikplate generate myorg/go-http-server -f values.yaml
+```
+
+### Generate and Push to Remote Repository
+
+```
+kikplate generate myorg/go-http-server -f values.yaml --repo https://github.com/you/my-app.git
+```
+
+Optional flags:
+
+| Flag | Description |
+|------|-------------|
+| `-f, --file` | YAML values file |
+| `--set` | Inline value override (`key=value`), repeatable |
+| `--output-dir` | Output directory (default: `./<slug>`) |
+| `--repo` | Push generated output to a remote repository |
+| `--template` | Use local plate directory instead of server |
+| `--force` | Force push when used with `--repo` |
+
 ## Global Flags
 
 | Flag | Description |
@@ -275,6 +314,7 @@ Optional flags:
 | `submit [repo-url]` | Submit repository as plate | Yes |
 | `verify [slug]` | Verify submitted plate | Yes |
 | `scaffold [slug] [target]` | Scaffold project from plate | No |
+| `generate [slug]` | Generate project from schema-based plate | No |
 | `plates add [slug]` | Add plate to local list | No |
 | `plates list` | List locally added plates | No |
 | `plates remove [slug]` | Remove plate from local list | No |

@@ -1,0 +1,82 @@
+package {{ .packageName }}.todo.service;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
+
+import {{ .packageName }}.common.exception.ResourceNotFoundException;
+import {{ .packageName }}.todo.dto.CreateTodoRequest;
+import {{ .packageName }}.todo.dto.UpdateTodoRequest;
+import {{ .packageName }}.todo.model.Todo;
+import {{ .packageName }}.todo.repository.TodoRepository;
+import java.time.Instant;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+class TodoServiceTest {
+
+    @Mock
+    private TodoRepository repository;
+
+    @InjectMocks
+    private TodoService service;
+
+    private Todo todo;
+
+    @BeforeEach
+    void setUp() {
+        todo = new Todo();
+        todo.setId(1L);
+        todo.setTitle("Initial");
+        todo.setCompleted(false);
+        todo.setCreatedAt(Instant.now());
+        todo.setUpdatedAt(Instant.now());
+    }
+
+    @Test
+    void shouldCreateTodo() {
+        CreateTodoRequest request = new CreateTodoRequest();
+        request.setTitle("Created from {{ .projectName }}");
+
+        when(repository.save(org.mockito.ArgumentMatchers.any(Todo.class))).thenAnswer(i -> {
+            Todo value = i.getArgument(0);
+            value.setId(77L);
+            return value;
+        });
+
+        var created = service.create(request);
+
+        assertEquals(77L, created.id());
+        assertEquals("Created from {{ .projectName }}", created.title());
+        assertFalse(created.completed());
+    }
+
+    @Test
+    void shouldUpdateTodo() {
+        UpdateTodoRequest request = new UpdateTodoRequest();
+        request.setTitle("Updated");
+        request.setCompleted(true);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(todo));
+        when(repository.save(todo)).thenReturn(todo);
+
+        var updated = service.update(1L, request);
+
+        assertEquals("Updated", updated.title());
+        assertEquals(true, updated.completed());
+    }
+
+    @Test
+    void shouldThrowWhenNotFound() {
+        when(repository.findById(404L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.getById(404L));
+    }
+}

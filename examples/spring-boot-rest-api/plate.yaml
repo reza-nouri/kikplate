@@ -1,0 +1,137 @@
+name: spring-boot-rest-api
+
+schema:
+  projectName:
+    type: string
+    required: true
+  appName:
+    type: string
+    required: false
+    default: Spring API
+  groupId:
+    type: string
+    required: true
+    default: com.example
+  artifactId:
+    type: string
+    required: true
+    default: spring-api
+  packageName:
+    type: string
+    required: true
+    default: com.example.springapi
+  javaVersion:
+    type: enum
+    values: [17, 21]
+    required: false
+    default: 21
+  serverPort:
+    type: int
+    required: false
+    default: 8080
+  apiBasePath:
+    type: string
+    required: false
+    default: /api/v1
+  database:
+    type: enum
+    values: [postgres, h2]
+    required: false
+    default: h2
+  postgresHost:
+    type: string
+    required: false
+    default: localhost
+  postgresPort:
+    type: int
+    required: false
+    default: 5432
+  postgresDatabase:
+    type: string
+    required: false
+    default: appdb
+  postgresUser:
+    type: string
+    required: false
+    default: appuser
+  postgresPassword:
+    type: string
+    required: false
+    default: apppass
+
+modules:
+  docker:
+    enabled: true
+  swagger:
+    enabled: true
+  actuator:
+    enabled: true
+  seedData:
+    enabled: false
+
+files:
+  - path: pom.xml
+    template: templates/pom.xml.tmpl
+
+  - path: .gitignore
+    template: templates/gitignore.tmpl
+
+  - path: README.md
+    template: templates/README.md.tmpl
+
+  - path: src/main/resources/application.yml
+    template: templates/src/main/resources/application.yml.tmpl
+
+  - path: src/main/java/{{ replace .packageName "." "/" }}/Application.java
+    template: templates/src/main/java/Application.java.tmpl
+
+  - path: src/main/java/{{ replace .packageName "." "/" }}/todo/model/Todo.java
+    template: templates/src/main/java/todo/model/Todo.java.tmpl
+
+  - path: src/main/java/{{ replace .packageName "." "/" }}/todo/repository/TodoRepository.java
+    template: templates/src/main/java/todo/repository/TodoRepository.java.tmpl
+
+  - path: src/main/java/{{ replace .packageName "." "/" }}/todo/service/TodoService.java
+    template: templates/src/main/java/todo/service/TodoService.java.tmpl
+
+  - path: src/main/java/{{ replace .packageName "." "/" }}/todo/dto/CreateTodoRequest.java
+    template: templates/src/main/java/todo/dto/CreateTodoRequest.java.tmpl
+
+  - path: src/main/java/{{ replace .packageName "." "/" }}/todo/dto/UpdateTodoRequest.java
+    template: templates/src/main/java/todo/dto/UpdateTodoRequest.java.tmpl
+
+  - path: src/main/java/{{ replace .packageName "." "/" }}/todo/dto/TodoResponse.java
+    template: templates/src/main/java/todo/dto/TodoResponse.java.tmpl
+
+  - path: src/main/java/{{ replace .packageName "." "/" }}/todo/controller/TodoController.java
+    template: templates/src/main/java/todo/controller/TodoController.java.tmpl
+
+  - path: src/main/java/{{ replace .packageName "." "/" }}/bootstrap/SeedDataLoader.java
+    condition: modules.seedData.enabled
+    template: templates/src/main/java/bootstrap/SeedDataLoader.java.tmpl
+
+  - path: src/main/java/{{ replace .packageName "." "/" }}/common/exception/ResourceNotFoundException.java
+    template: templates/src/main/java/common/exception/ResourceNotFoundException.java.tmpl
+
+  - path: src/main/java/{{ replace .packageName "." "/" }}/common/exception/GlobalExceptionHandler.java
+    template: templates/src/main/java/common/exception/GlobalExceptionHandler.java.tmpl
+
+  - path: src/main/java/{{ replace .packageName "." "/" }}/config/OpenApiConfig.java
+    condition: modules.swagger.enabled
+    template: templates/src/main/java/config/OpenApiConfig.java.tmpl
+
+  - path: src/test/java/{{ replace .packageName "." "/" }}/ApplicationTests.java
+    template: templates/src/test/java/ApplicationTests.java.tmpl
+
+  - path: src/test/java/{{ replace .packageName "." "/" }}/todo/controller/TodoControllerTest.java
+    template: templates/src/test/java/todo/controller/TodoControllerTest.java.tmpl
+
+  - path: src/test/java/{{ replace .packageName "." "/" }}/todo/service/TodoServiceTest.java
+    template: templates/src/test/java/todo/service/TodoServiceTest.java.tmpl
+
+  - path: src/test/resources/application-test.yml
+    template: templates/src/test/resources/application-test.yml.tmpl
+
+  - path: Dockerfile
+    condition: modules.docker.enabled
+    template: templates/Dockerfile.tmpl

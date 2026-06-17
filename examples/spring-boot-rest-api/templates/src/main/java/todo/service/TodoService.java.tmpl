@@ -1,0 +1,73 @@
+package {{ .packageName }}.todo.service;
+
+import {{ .packageName }}.common.exception.ResourceNotFoundException;
+import {{ .packageName }}.todo.dto.CreateTodoRequest;
+import {{ .packageName }}.todo.dto.TodoResponse;
+import {{ .packageName }}.todo.dto.UpdateTodoRequest;
+import {{ .packageName }}.todo.model.Todo;
+import {{ .packageName }}.todo.repository.TodoRepository;
+import java.time.Instant;
+import java.util.List;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class TodoService {
+
+    private final TodoRepository repository;
+
+    public TodoService(TodoRepository repository) {
+        this.repository = repository;
+    }
+
+    @Transactional(readOnly = true)
+    public List<TodoResponse> getAll() {
+        return repository.findAll().stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public TodoResponse getById(Long id) {
+        return toResponse(findEntity(id));
+    }
+
+    @Transactional
+    public TodoResponse create(CreateTodoRequest request) {
+        Instant now = Instant.now();
+        Todo todo = new Todo();
+        todo.setTitle(request.getTitle());
+        todo.setCompleted(false);
+        todo.setCreatedAt(now);
+        todo.setUpdatedAt(now);
+        return toResponse(repository.save(todo));
+    }
+
+    @Transactional
+    public TodoResponse update(Long id, UpdateTodoRequest request) {
+        Todo todo = findEntity(id);
+        todo.setTitle(request.getTitle());
+        todo.setCompleted(request.isCompleted());
+        todo.setUpdatedAt(Instant.now());
+        return toResponse(repository.save(todo));
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        Todo todo = findEntity(id);
+        repository.delete(todo);
+    }
+
+    private Todo findEntity(Long id) {
+        return repository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Todo not found: " + id));
+    }
+
+    private TodoResponse toResponse(Todo todo) {
+        return new TodoResponse(
+            todo.getId(),
+            todo.getTitle(),
+            todo.isCompleted(),
+            todo.getCreatedAt(),
+            todo.getUpdatedAt()
+        );
+    }
+}

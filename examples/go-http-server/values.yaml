@@ -1,0 +1,10 @@
+projectName: my-api
+modulePath: github.com/you/my-api
+port: "9090"
+database: none
+
+modules:
+  docker:
+    enabled: true
+  database:
+    enabled: false
