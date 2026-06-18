@@ -10,9 +10,9 @@ import (
 var verifyCmd = &cobra.Command{
 	Use:   "verify [slug]",
 	Short: "Verify a submitted plate",
-	Long: `Verify a plate by checking its kickplate.yaml verification token.
+	Long: `Verify a plate by checking its plate.yaml verification token.
 The plate must have been submitted first and the verification_token
-must be present in the repository's kickplate.yaml file.
+must be present in the repository's plate.yaml file.
 On success the plate becomes approved, public, and verified.`,
 	Example: `  kikplate verify myorg/my-template`,
 	Args:    cobra.ExactArgs(1),

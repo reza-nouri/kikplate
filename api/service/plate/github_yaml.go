@@ -3,6 +3,7 @@ package plate
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,7 +19,35 @@ func (s *plateService) fetchKickplateYAML(repoURL, branch string) (*KickplateYAM
 }
 
 func (s *plateService) fetchKickplateYAMLWithOptions(repoURL, branch string, forceRefresh bool) (*KickplateYAML, error) {
-	apiURL := repoURLToContentsURL(repoURL, branch)
+	manifest, err := s.fetchManifestYAML(repoURL, branch, "plate.yaml", forceRefresh)
+	if err == nil && strings.TrimSpace(manifest.Owner) != "" {
+		return manifest, nil
+	}
+
+	if err != nil && !errors.Is(err, ErrMissingYAML) {
+		return nil, err
+	}
+
+	legacy, legacyErr := s.fetchManifestYAML(repoURL, branch, "kikplate.yaml", forceRefresh)
+	if legacyErr != nil {
+		if err == nil {
+			return nil, ErrMissingYAML
+		}
+		if errors.Is(err, ErrMissingYAML) && errors.Is(legacyErr, ErrMissingYAML) {
+			return nil, ErrMissingYAML
+		}
+		return nil, legacyErr
+	}
+
+	if strings.TrimSpace(legacy.Owner) == "" {
+		return nil, ErrMissingYAML
+	}
+
+	return legacy, nil
+}
+
+func (s *plateService) fetchManifestYAML(repoURL, branch, filename string, forceRefresh bool) (*KickplateYAML, error) {
+	apiURL := repoURLToContentsURL(repoURL, branch, filename)
 	if forceRefresh {
 		apiURL = fmt.Sprintf("%s&_nonce=%d", apiURL, time.Now().UnixNano())
 	}
@@ -65,20 +94,17 @@ func (s *plateService) fetchKickplateYAMLWithOptions(repoURL, branch string, for
 		raw = []byte(ghResp.Content)
 	}
 
-	var kp KickplateYAML
-	if err := yaml.Unmarshal(raw, &kp); err != nil {
+	var manifest KickplateYAML
+	if err := yaml.Unmarshal(raw, &manifest); err != nil {
 		return nil, ErrFetchFailed
 	}
-	if kp.Owner == "" {
-		return nil, ErrMissingYAML
-	}
 
-	return &kp, nil
+	return &manifest, nil
 }
 
-func repoURLToContentsURL(repoURL, branch string) string {
-	return fmt.Sprintf("https://api.github.com/repos/%s/contents/kikplate.yaml?ref=%s",
-		extractRepoPath(repoURL), url.QueryEscape(strings.TrimSpace(branch)))
+func repoURLToContentsURL(repoURL, branch, filename string) string {
+	return fmt.Sprintf("https://api.github.com/repos/%s/contents/%s?ref=%s",
+		extractRepoPath(repoURL), filename, url.QueryEscape(strings.TrimSpace(branch)))
 }
 
 func extractRepoPath(repoURL string) string {

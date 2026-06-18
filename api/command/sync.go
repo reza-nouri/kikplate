@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -149,7 +150,7 @@ func syncOnePlate(
 		return
 	}
 
-	manifest, _, err := fetchKickplateYAML(*plate.RepoURL, *plate.Branch)
+	manifest, _, err := fetchPlateManifestYAML(*plate.RepoURL, *plate.Branch)
 	if err != nil {
 		failed := model.SyncStatusFailed
 		errText := err.Error()
@@ -268,7 +269,7 @@ func syncOnePlate(
 	logger.Infof("sync: plate %s status=%s next=%s", plate.ID, syncStatus, nextSync.Format(time.RFC3339))
 }
 
-type syncKickplateYAML struct {
+type syncPlateManifestYAML struct {
 	Owner             string           `yaml:"owner"`
 	Name              string           `yaml:"name"`
 	Description       string           `yaml:"description"`
@@ -285,7 +286,7 @@ func syncPlateManifest(
 	plateTagRepo repository.PlateTagRepository,
 	env lib.Env,
 	plate *model.Plate,
-	manifest *syncKickplateYAML,
+	manifest *syncPlateManifestYAML,
 	metadataJSON []byte,
 ) error {
 	plate.Name = manifest.Name
@@ -336,8 +337,36 @@ func normalizedManifestTags(tags []string) []string {
 	return result
 }
 
-func fetchKickplateYAML(repoURL, branch string) (*syncKickplateYAML, []byte, error) {
-	apiURL := repoURLToContentsURL(repoURL, branch)
+func fetchPlateManifestYAML(repoURL, branch string) (*syncPlateManifestYAML, []byte, error) {
+	manifest, raw, err := fetchManifestFileYAML(repoURL, branch, "plate.yaml")
+	if err == nil && strings.TrimSpace(manifest.Owner) != "" {
+		return manifest, raw, nil
+	}
+	if err != nil && !errors.Is(err, ErrSyncMissingManifest) {
+		return nil, nil, err
+	}
+
+	legacyManifest, legacyRaw, legacyErr := fetchManifestFileYAML(repoURL, branch, "kikplate.yaml")
+	if legacyErr != nil {
+		if err == nil {
+			return nil, nil, ErrSyncMissingManifest
+		}
+		if errors.Is(err, ErrSyncMissingManifest) && errors.Is(legacyErr, ErrSyncMissingManifest) {
+			return nil, nil, ErrSyncMissingManifest
+		}
+		return nil, nil, legacyErr
+	}
+	if strings.TrimSpace(legacyManifest.Owner) == "" {
+		return nil, nil, ErrSyncMissingManifest
+	}
+
+	return legacyManifest, legacyRaw, nil
+}
+
+var ErrSyncMissingManifest = errors.New("manifest not found")
+
+func fetchManifestFileYAML(repoURL, branch, filename string) (*syncPlateManifestYAML, []byte, error) {
+	apiURL := repoURLToContentsURL(repoURL, branch, filename)
 	client := &http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Get(apiURL)
 	if err != nil {
@@ -346,7 +375,7 @@ func fetchKickplateYAML(repoURL, branch string) (*syncKickplateYAML, []byte, err
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil, fmt.Errorf("kikplate.yaml not found")
+		return nil, nil, ErrSyncMissingManifest
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, nil, fmt.Errorf("fetch failed with status %d", resp.StatusCode)
@@ -370,16 +399,16 @@ func fetchKickplateYAML(repoURL, branch string) (*syncKickplateYAML, []byte, err
 		raw = []byte(ghResp.Content)
 	}
 
-	var kp syncKickplateYAML
-	if err := yaml.Unmarshal(raw, &kp); err != nil {
-		return nil, nil, fmt.Errorf("invalid kickplate.yaml")
+	var manifest syncPlateManifestYAML
+	if err := yaml.Unmarshal(raw, &manifest); err != nil {
+		return nil, nil, fmt.Errorf("invalid manifest yaml")
 	}
 
-	return &kp, raw, nil
+	return &manifest, raw, nil
 }
 
-func repoURLToContentsURL(repoURL, branch string) string {
-	return fmt.Sprintf("https://api.github.com/repos/%s/contents/kikplate.yaml?ref=%s", extractRepoPath(repoURL), branch)
+func repoURLToContentsURL(repoURL, branch, filename string) string {
+	return fmt.Sprintf("https://api.github.com/repos/%s/contents/%s?ref=%s", extractRepoPath(repoURL), filename, branch)
 }
 
 func extractRepoPath(repoURL string) string {

@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type KickplateYAML struct {
+type RepositoryManifestYAML struct {
 	Owner             string           `yaml:"owner"`
 	Name              string           `yaml:"name"`
 	Description       string           `yaml:"description"`
@@ -17,6 +17,8 @@ type KickplateYAML struct {
 	Variables         []map[string]any `yaml:"variables"`
 	Dependencies      []map[string]any `yaml:"dependencies"`
 }
+
+type KickplateYAML = RepositoryManifestYAML
 
 type plateService struct {
 	db           *gorm.DB
