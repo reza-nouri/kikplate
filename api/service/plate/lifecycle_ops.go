@@ -149,6 +149,14 @@ func (s *plateService) Remove(ctx context.Context, plateID uuid.UUID, accountID 
 		}
 	}
 
+	if s.db != nil {
+		if err := s.db.WithContext(ctx).
+			Where("plate_id = ?", plateID).
+			Delete(&model.Generation{}).Error; err != nil {
+			return err
+		}
+	}
+
 	return s.plates.Delete(ctx, plateID)
 }
 

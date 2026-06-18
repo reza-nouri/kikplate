@@ -85,8 +85,17 @@ func (s *plateService) requireOwnerOrMember(ctx context.Context, plateID, accoun
 	if err != nil {
 		return err
 	}
-	if member == nil || member.Role != requiredRole {
-		return ErrForbidden
+	if member != nil && member.Role == requiredRole {
+		return nil
 	}
-	return nil
+
+	plate, err := s.plates.GetByID(ctx, plateID)
+	if err != nil {
+		return err
+	}
+	if plate != nil && plate.OwnerID == accountID {
+		return nil
+	}
+
+	return ErrForbidden
 }
