@@ -128,14 +128,14 @@ export function FeaturedPlates() {
               <Terminal className="h-4 w-4" />
               <p className="text-xs font-semibold uppercase tracking-widest">Quick start</p>
             </div>
-            <h3 className="text-xl font-bold text-foreground">Scaffold in seconds</h3>
+            <h3 className="text-xl font-bold text-foreground">Generate in seconds</h3>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Use the KikPlate CLI to search, scaffold and manage plates directly from your terminal.
+              Use the kik CLI to search plates, inspect schema, and generate ready-to-use project output.
             </p>
             <div className="mt-5 border border-border bg-background p-4 font-mono text-sm text-muted-foreground">
-              <p><span className="text-foreground/50">$</span> kikplate search --name golang</p>
-              <p className="mt-1"><span className="text-foreground/50">$</span> kikplate scaffold go-clean-arch</p>
-              <p className="mt-1"><span className="text-foreground/50">$</span> kikplate describe my-plate</p>
+              <p><span className="text-foreground/50">$</span> kik search --name golang</p>
+              <p className="mt-1"><span className="text-foreground/50">$</span> kik describe go-clean-arch</p>
+              <p className="mt-1"><span className="text-foreground/50">$</span> kik generate go-clean-arch -f values.yaml</p>
             </div>
             <div className="mt-6">
               <Link

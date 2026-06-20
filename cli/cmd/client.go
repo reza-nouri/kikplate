@@ -23,7 +23,7 @@ func NewSession(cmd *cobra.Command) (*Session, error) {
 	path := resolveConfigPath(cmd)
 	cfg, err := LoadConfig(path)
 	if err != nil {
-		return nil, fmt.Errorf("config error: %w\nRun 'kikplate config init' first", err)
+		return nil, fmt.Errorf("config error: %w\nRun 'kik config init' first", err)
 	}
 	return &Session{Config: cfg, CfgPath: path}, nil
 }
@@ -34,7 +34,7 @@ func NewAuthSession(cmd *cobra.Command) (*Session, error) {
 		return nil, err
 	}
 	if s.Config.Auth.Token == "" {
-		return nil, fmt.Errorf("not logged in — run 'kikplate login' first")
+		return nil, fmt.Errorf("not logged in — run 'kik login' first")
 	}
 	return s, nil
 }
@@ -103,7 +103,7 @@ func decodeJSONStatus(resp *http.Response, expect int, target any) error {
 	body, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("unauthorized — run 'kikplate login' first")
+		return fmt.Errorf("unauthorized — run 'kik login' first")
 	}
 	if resp.StatusCode != expect {
 		if looksLikeHTML(resp, body) {

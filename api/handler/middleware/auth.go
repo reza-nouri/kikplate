@@ -12,6 +12,12 @@ import (
 func Authenticate(env lib.Env, logger lib.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Public endpoints - no authentication required
+			if strings.HasPrefix(r.URL.Path, "/generate") {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			token := extractBearerToken(r)
 			if token == "" {
 				next.ServeHTTP(w, r)

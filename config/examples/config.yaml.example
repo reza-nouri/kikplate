@@ -73,7 +73,7 @@ customization:
   # Logo URL used in the navbar.
   # Local example: a file from web/public.
   # Kubernetes example: a CDN/object-storage URL managed via ConfigMap.
-  logo: "/kikplate-logo-on-dark.svg"
+  logo: "https://kikplate.dev/kikplate-logo-on-dark.svg"
 
   # Main hero title on the landing page.
   # Use \n to force a line break.

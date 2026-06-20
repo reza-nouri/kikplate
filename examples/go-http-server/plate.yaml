@@ -1,0 +1,41 @@
+name: go-http-server
+
+schema:
+  projectName:
+    type: string
+    required: true
+  modulePath:
+    type: string
+    required: true
+  port:
+    type: string
+    required: false
+    default: "8080"
+  database:
+    type: enum
+    values: [postgres, sqlite, none]
+    required: false
+    default: none
+
+modules:
+  docker:
+    enabled: true
+  database:
+    enabled: false
+
+files:
+  - path: main.go
+    template: templates/main.go.tmpl
+
+  - path: go.mod
+    template: templates/go.mod.tmpl
+
+  - path: README.md
+    template: templates/README.md.tmpl
+
+  - path: Dockerfile
+    condition: modules.docker.enabled
+    template: templates/Dockerfile.tmpl
+
+  - path: internal/server/server.go
+    template: templates/internal/server/server.go.tmpl

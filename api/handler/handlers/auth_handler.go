@@ -362,3 +362,44 @@ func (h AuthHandler) Providers(w http.ResponseWriter, r *http.Request) {
 		"providers": names,
 	})
 }
+
+func (h AuthHandler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.authService.RequestPasswordReset(r.Context(), input.Email); err != nil {
+		h.logger.Errorf("request password reset failed: %v", err)
+		respondServiceError(w, err)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]string{
+		"message": "if an account exists with that email, you will receive a password reset link",
+	})
+}
+
+func (h AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Token       string `json:"token"`
+		NewPassword string `json:"new_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		respondError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if err := h.authService.ResetPassword(r.Context(), input.Token, input.NewPassword); err != nil {
+		h.logger.Errorf("reset password failed: %v", err)
+		respondServiceError(w, err)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]string{
+		"message": "password reset successfully",
+	})
+}

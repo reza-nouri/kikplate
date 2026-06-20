@@ -119,7 +119,7 @@ Key fields:
 - `consecutive_failures`
 
 - Metadata:
-- `metadata` jsonb (parsed `kikplate.yaml`)
+- `metadata` jsonb (parsed `plate.yaml`)
 
 - Timestamps:
 - `published_at` nullable
@@ -133,7 +133,7 @@ Notes:
 ```mermaid
 flowchart LR
 	SUBMIT[Submit repository]
-	YAML[Read kikplate.yaml]
+	YAML[Read plate.yaml]
 	PENDING[plate: pending/private\nverification_token set]
 	VERIFY[POST verify]
 	APPROVED[approved/public\nis_verified=true]

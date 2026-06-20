@@ -4,7 +4,23 @@ function repoToRaw(repoUrl: string, branch: string, file: string): string {
 }
 
 export function repoToPath(repoUrl: string): string {
-  return repoUrl
+  const trimmed = repoUrl.trim()
+
+  if (trimmed.startsWith("git@github.com:")) {
+    return trimmed
+      .replace("git@github.com:", "")
+      .replace(/\.git$/, "")
+      .replace(/\/$/, "")
+  }
+
+  if (trimmed.startsWith("ssh://git@github.com/")) {
+    return trimmed
+      .replace("ssh://git@github.com/", "")
+      .replace(/\.git$/, "")
+      .replace(/\/$/, "")
+  }
+
+  return trimmed
     .replace("https://github.com/", "")
     .replace("http://github.com/", "")
     .replace(/\.git$/, "")

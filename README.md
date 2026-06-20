@@ -25,9 +25,9 @@
 
 | Topic | Description |
 |-------|-------------|
-| **Templates as code** | Every template ("plate") is a public GitHub repository containing a `kikplate.yaml` manifest. There is nothing to upload — the source of truth is always the repository. |
-| **Verification workflow** | Submitting a plate issues a one-time token. Placing that token in `kikplate.yaml` and calling `verify` proves ownership and moves the plate to the approved state. |
-| **Continuous sync** | The background sync worker periodically re-reads each approved plate's `kikplate.yaml`, updating metadata and catching drift or revocation automatically. |
+| **Templates as code** | Every template ("plate") is a public GitHub repository containing a `plate.yaml` manifest. There is nothing to upload — the source of truth is always the repository. |
+| **Verification workflow** | Submitting a plate issues a one-time token. Placing that token in `plate.yaml` and calling `verify` proves ownership and moves the plate to the approved state. |
+| **Continuous sync** | The background sync worker periodically re-reads each approved plate's `plate.yaml`, updating metadata and catching drift or revocation automatically. |
 | **Organizations** | Plates can be scoped to an organization, enabling teams and companies to maintain shared template catalogs under a single namespace. |
 | **Badges** | Admins award badges (community, verified, official, sponsored) to signal quality and curation level. |
 | **CLI** | The `kikplate` CLI handles authentication, searching, describing, and scaffolding templates without touching a browser. |
@@ -110,7 +110,7 @@ kikplate search --category backend
 | Document | Description |
 |----------|-------------|
 | [Getting Started](docs/getting-started.md) | Prerequisites, local setup, dev workflow, running tests |
-| [How It Works](docs/how-it-works.md) | Core concepts: plates, kikplate.yaml, verification lifecycle, sync, badges |
+| [How It Works](docs/how-it-works.md) | Core concepts: plates, plate.yaml, verification lifecycle, sync, badges |
 | [Architecture](docs/architecture.md) | Component map, layers, HTTP surface, DI modules, data flow diagrams |
 | [Database](docs/database.md) | Schema reference, table definitions, entity relationships |
 | [Configuration](docs/configuration.md) | All config file keys and environment variable overrides |
@@ -140,4 +140,9 @@ kubernetes/   Kustomize manifests for direct kubectl deployments
 ## License
 
 [LICENSE](LICENSE)
+
+
+
+
+
 

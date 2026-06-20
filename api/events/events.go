@@ -4,6 +4,7 @@ const (
 	UserRegistered            = "user.registered"
 	UserVerificationRequested = "user.verification_requested"
 	PasswordChanged           = "user.password_changed"
+	PasswordResetRequested    = "user.password_reset_requested"
 	UserLiked                 = "user.liked"
 	PlateSubmitted            = "plate.submitted"
 	PlateVerified             = "plate.verified"
@@ -24,6 +25,12 @@ type UserVerificationRequestedPayload struct {
 
 type PasswordChangedPayload struct {
 	Email string
+}
+
+type PasswordResetRequestedPayload struct {
+	Email    string
+	Name     string
+	ResetURL string
 }
 
 type UserLikedPayload struct {

@@ -12,7 +12,7 @@ var (
 	ErrOrganizationRequired      = errors.New("organization is required")
 	ErrNoUsername                = errors.New("repository plates require a username — go to Account settings to set one before submitting")
 	ErrOwnerMismatch             = errors.New("owner field does not match the expected owner (username for personal, organization name for org submissions)")
-	ErrMissingYAML               = errors.New("kikplate.yaml not found in repository")
+	ErrMissingYAML               = errors.New("manifest not found in repository (expected plate.yaml or kikplate.yaml)")
 	ErrFetchFailed               = errors.New("failed to fetch repository")
 	ErrAlreadyReviewed           = errors.New("you have already reviewed this plate")
 	ErrCannotReviewOwn           = errors.New("you cannot review your own plate")

@@ -13,6 +13,7 @@ var Module = fx.Options(
 	fx.Provide(NewOrganizationRoutes),
 	fx.Provide(NewConfigRoutes),
 	fx.Provide(NewUserRoutes),
+	fx.Provide(NewGeneratorRoutes),
 )
 
 type Route interface {
@@ -29,6 +30,7 @@ func NewRoutes(
 	org OrganizationRoutes,
 	config ConfigRoutes,
 	user UserRoutes,
+	gen GeneratorRoutes,
 ) Routes {
 	return Routes{
 		helloRoutes,
@@ -38,6 +40,7 @@ func NewRoutes(
 		org,
 		config,
 		user,
+		gen,
 	}
 }
 

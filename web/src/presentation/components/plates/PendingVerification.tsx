@@ -55,7 +55,7 @@ export function PendingVerification({ plate, onRemove, removing = false }: Props
             <div className="min-w-0">
               <p className="font-semibold text-amber-900 dark:text-amber-100">Verification Pending</p>
               <p className="mt-1 text-sm text-amber-800 dark:text-amber-200">
-                To publish this plate, add the verification token to your kikplate.yaml and push it to the repository.
+                To publish this plate, add the verification token to your plate.yaml and push it to the repository.
               </p>
             </div>
             {onRemove ? (
@@ -80,7 +80,7 @@ export function PendingVerification({ plate, onRemove, removing = false }: Props
           </div>
 
           <div className="space-y-2">
-            <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Add this to your kikplate.yaml:</p>
+            <p className="text-sm font-medium text-amber-900 dark:text-amber-100">Add this to your plate.yaml:</p>
             <div className="flex gap-2">
               <code className="flex-1 overflow-auto rounded bg-amber-100/50 px-3 py-2 font-mono text-xs text-foreground dark:bg-amber-950/40">
                 {snippetYAML}

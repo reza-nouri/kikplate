@@ -182,12 +182,14 @@ func stampReadme(dir string, plate *LocalPlate) {
 }
 
 func cleanKikplateYaml(dir string) {
-	path := filepath.Join(dir, "kikplate.yaml")
-	if _, err := os.Stat(path); err == nil {
-		if err := os.Remove(path); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: could not remove kikplate.yaml: %v\n", err)
-		} else {
-			fmt.Println("Removed kikplate.yaml")
+	for _, filename := range []string{"plate.yaml", "kikplate.yaml"} {
+		path := filepath.Join(dir, filename)
+		if _, err := os.Stat(path); err == nil {
+			if err := os.Remove(path); err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: could not remove %s: %v\n", filename, err)
+			} else {
+				fmt.Printf("Removed %s\n", filename)
+			}
 		}
 	}
 }
@@ -204,7 +206,7 @@ func resolvePlate(cmd *cobra.Command, slug string) (*LocalPlate, error) {
 
 	s, err := NewSession(cmd)
 	if err != nil {
-		return nil, fmt.Errorf("plate %q not found locally and config not available: %w\nRun 'kikplate config init' first", slug, err)
+		return nil, fmt.Errorf("plate %q not found locally and config not available: %w\nRun 'kik config init' first", slug, err)
 	}
 
 	plate, err := s.FetchPlateBySlug(slug)

@@ -146,7 +146,7 @@ All routes are registered in `api/handler/routes/module.go`. The base URL for al
 
 ## Plate Lifecycle
 
-A plate is the core entity in Kikplate. Every plate is backed by a public GitHub repository that contains a `kikplate.yaml` manifest at its root.
+A plate is the core entity in Kikplate. Every plate is backed by a public GitHub repository that contains a `plate.yaml` manifest at its root.
 
 ```mermaid
 stateDiagram-v2
@@ -161,9 +161,9 @@ stateDiagram-v2
 Submission flow:
 
 1. User submits a repository URL via `POST /plates/repository`.
-2. The service fetches `kikplate.yaml` from the repository and validates the declared owner.
+2. The service fetches `plate.yaml` from the repository and validates the declared owner.
 3. A plate record is created with `status=pending`, `visibility=private`, and a generated `verification_token`.
-4. The user adds that token to `kikplate.yaml` in their repository and calls `POST /plates/{id}/verify`.
+4. The user adds that token to `plate.yaml` in their repository and calls `POST /plates/{id}/verify`.
 5. On success the plate becomes `status=approved`, `visibility=public`, `is_verified=true`.
 
 ## Synchronizer
@@ -174,7 +174,7 @@ The sync worker runs as `app:sync`. It loops on `sync.poll_interval`, queries pl
 flowchart TD
     DUE[Query plates due for sync]
     SYNCING[Set sync_status = syncing]
-    FETCH[Fetch kikplate.yaml from GitHub]
+    FETCH[Fetch plate.yaml from GitHub]
     TOK{Token matches?}
     OK[Update metadata and tags  Set sync_status = synced]
     BAD[Set sync_status = unverified  Visibility = private]
@@ -215,7 +215,7 @@ PostgreSQL GIN indexes are created for full-text search and trigram matching. B-
 - Backend: Go, Chi, Uber Fx, GORM, PostgreSQL
 - Frontend: Next.js
 - Auth: local email/password, OAuth providers, or trusted header auth
-- Sync: background worker that re-fetches `kikplate.yaml` from GitHub
+- Sync: background worker that re-fetches `plate.yaml` from GitHub
 
 ```mermaid
 graph TD
@@ -327,12 +327,12 @@ Current routes are registered by `api/handler/routes/module.go`.
 Kickplate is repository-first. Plate type is currently only `repository`.
 
 1. User submits repository via `POST /plates/repository`.
-2. Service fetches `kikplate.yaml` from the submitted repo and branch.
+2. Service fetches `plate.yaml` from the submitted repo and branch.
 3. Owner validation:
-- Personal submission: `kikplate.yaml.owner` must match username.
-- Organization submission: `kikplate.yaml.owner` must match org name.
+- Personal submission: `plate.yaml.owner` must match username.
+- Organization submission: `plate.yaml.owner` must match org name.
 4. Plate is created as pending + private with generated `verification_token`.
-5. User adds that token to `kikplate.yaml` and calls `POST /plates/{id}/verify`.
+5. User adds that token to `plate.yaml` and calls `POST /plates/{id}/verify`.
 6. On success: plate becomes approved, public, verified, and sync schedule is initialized.
 
 ```mermaid
@@ -351,7 +351,7 @@ stateDiagram-v2
 For each due plate:
 
 1. Mark `sync_status=syncing`.
-2. Fetch `kikplate.yaml` from GitHub API.
+2. Fetch `plate.yaml` from GitHub API.
 3. Validate verification token still matches.
 4. If valid, update metadata + tags and mark synced.
 5. If invalid/missing token, mark unverified and force private visibility.
@@ -361,7 +361,7 @@ For each due plate:
 flowchart TD
 	DUE[List due plates]
 	SYNCING[Set sync_status=syncing]
-	FETCH[Fetch kikplate.yaml]
+	FETCH[Fetch plate.yaml]
 	TOK{Token matches?}
 	OK[Update metadata/tags\nSet synced]
 	BAD[Set unverified\nForce private]

@@ -14,6 +14,7 @@ tags:
   - name: Organizations
   - name: Badges
   - name: Health
+  - name: Generator
 components:
   securitySchemes:
     bearerAuth:
@@ -312,6 +313,66 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Organization'
+
+    GeneratorSchemaField:
+      type: object
+      properties:
+        type:
+          type: string
+        required:
+          type: boolean
+        values:
+          type: array
+          items:
+            type: string
+        default: {}
+
+    GeneratorModuleDefinition:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+
+    GeneratorFileEntry:
+      type: object
+      properties:
+        path:
+          type: string
+        template:
+          type: string
+        condition:
+          type: string
+
+    GeneratorSchema:
+      type: object
+      properties:
+        name:
+          type: string
+        schema:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/GeneratorSchemaField'
+        modules:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/GeneratorModuleDefinition'
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeneratorFileEntry'
+
+    GeneratorRequest:
+      type: object
+      properties:
+        values:
+          type: object
+          additionalProperties: true
+
+    GeneratorError:
+      type: object
+      properties:
+        error:
+          type: string
 paths:
   /hello:
     get:
@@ -1051,3 +1112,88 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Badge'
+
+  /generate/{slug}/schema:
+    get:
+      tags: [Generator]
+      summary: Get plate generation schema
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneratorSchema'
+        '404':
+          description: Plate not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneratorError'
+        '422':
+          description: Plate cannot be generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneratorError'
+
+  /generate/{slug}:
+    post:
+      tags: [Generator]
+      summary: Generate project archive from plate values
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GeneratorRequest'
+      responses:
+        '200':
+          description: Generated zip archive
+          headers:
+            X-Generation-ID:
+              description: Persisted generation identifier
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Invalid generation input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneratorError'
+        '404':
+          description: Plate not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneratorError'
+        '422':
+          description: Plate or template cannot be generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneratorError'
+        '502':
+          description: Failed to fetch remote plate content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GeneratorError'

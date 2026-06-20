@@ -5,52 +5,28 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/kickplate/cli/internal/config"
 	"github.com/spf13/cobra"
-	"go.yaml.in/yaml/v2"
 )
 
-type CLIConfig struct {
-	Server ServerConfig `yaml:"server"`
-	Auth   AuthConfig   `yaml:"auth"`
-}
+type CLIConfig = config.CLIConfig
+type ServerConfig = config.ServerConfig
+type AuthConfig = config.AuthConfig
 
-type ServerConfig struct {
-	Address string `yaml:"address"`
-}
-
-type AuthConfig struct {
-	Token string `yaml:"token"`
-}
-
-var defaultConfigPath = filepath.Join(os.Getenv("HOME"), ".kikplate", "config.yaml")
+var defaultConfigPath = config.DefaultConfigPath
 
 func LoadConfig(path string) (*CLIConfig, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("cannot read config file %s: %w", path, err)
-	}
-	var cfg CLIConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf("cannot parse config file: %w", err)
-	}
-	if cfg.Server.Address == "" {
-		return nil, fmt.Errorf("server.address is required in config file")
-	}
-	return &cfg, nil
+	return config.Load(path)
 }
 
 func SaveConfig(path string, cfg *CLIConfig) error {
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(path, data, 0o644)
+	return config.Save(path, cfg)
 }
 
 func resolveConfigPath(cmd *cobra.Command) string {
 	path, _ := cmd.Root().PersistentFlags().GetString("config")
 	if path == "" {
-		path = defaultConfigPath
+		path = config.DefaultConfigPath
 	}
 	return path
 }
@@ -70,7 +46,7 @@ var configInitCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		path, _ := cmd.Flags().GetString("file")
 		if path == "" {
-			path = defaultConfigPath
+			path = config.DefaultConfigPath
 		}
 		dir := filepath.Dir(path)
 		if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -84,11 +60,7 @@ var configInitCmd = &cobra.Command{
 				Address: "https://kikplate.dev/api",
 			},
 		}
-		data, err := yaml.Marshal(&defaultCfg)
-		if err != nil {
-			return err
-		}
-		if err := os.WriteFile(path, data, 0o644); err != nil {
+		if err := config.Save(path, &defaultCfg); err != nil {
 			return fmt.Errorf("cannot write config file: %w", err)
 		}
 		fmt.Printf("Config file created at %s\n", path)
@@ -103,7 +75,7 @@ var configViewCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		path, _ := cmd.Root().PersistentFlags().GetString("config")
 		if path == "" {
-			path = defaultConfigPath
+			path = config.DefaultConfigPath
 		}
 		data, err := os.ReadFile(path)
 		if err != nil {

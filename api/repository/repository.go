@@ -108,6 +108,14 @@ type EmailVerificationRepository interface {
 	DeleteExpired(ctx context.Context) error
 }
 
+type PasswordResetRepository interface {
+	Create(ctx context.Context, pr *model.PasswordReset) error
+	GetByToken(ctx context.Context, token string) (*model.PasswordReset, error)
+	CountByUserSince(ctx context.Context, userID uuid.UUID, since time.Time) (int64, error)
+	MarkUsed(ctx context.Context, id uuid.UUID) error
+	DeleteExpired(ctx context.Context) error
+}
+
 type PlateRepository interface {
 	Create(ctx context.Context, plate *model.Plate) error
 	GetByID(ctx context.Context, id uuid.UUID) (*model.Plate, error)
@@ -173,4 +181,11 @@ type OrganizationRepository interface {
 	Update(ctx context.Context, org *model.Organization) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	CountPlates(ctx context.Context, orgID uuid.UUID) (int, error)
+}
+
+type GenerationRepository interface {
+	Create(ctx context.Context, gen *model.Generation) error
+	GetByID(ctx context.Context, id uuid.UUID) (*model.Generation, error)
+	UpdateStatus(ctx context.Context, id uuid.UUID, status model.GenerationStatus, errMsg *string) error
+	ListByAccount(ctx context.Context, accountID uuid.UUID, limit, offset int) ([]*model.Generation, int, error)
 }

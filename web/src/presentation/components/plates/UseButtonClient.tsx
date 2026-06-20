@@ -10,11 +10,12 @@ interface Props {
   plateId?: string
   slug: string
   repoUrl?: string
+  generateCommand?: string
   prominent?: boolean
   className?: string
 }
 
-export function UseButtonClient({ slug, repoUrl, prominent = false, className }: Props) {
+export function UseButtonClient({ slug, repoUrl, generateCommand, prominent = false, className }: Props) {
   const [openModal, setOpenModal] = useState(false)
 
   return (
@@ -32,7 +33,13 @@ export function UseButtonClient({ slug, repoUrl, prominent = false, className }:
         <Download className="h-3.5 w-3.5" />
         <span className="text-sm font-semibold">Use plate</span>
       </Button>
-      <UseModal open={openModal} onClose={() => setOpenModal(false)} repoUrl={repoUrl} slug={slug} />
+      <UseModal
+        open={openModal}
+        onClose={() => setOpenModal(false)}
+        repoUrl={repoUrl}
+        slug={slug}
+        generateCommand={generateCommand}
+      />
     </>
   )
 }

@@ -1,20 +1,26 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { Fragment, useState, useEffect, useMemo } from "react"
 import type { ComponentPropsWithoutRef } from "react"
-import { ChevronDown, ChevronRight, File, Folder } from "lucide-react"
+import { ChevronDown, ChevronRight, File, Folder, Loader2 } from "lucide-react"
 import type { RepoTreeEntry } from "@/src/data/repositories/githubClient"
 import { resolveRepoMarkdownHref } from "@/src/presentation/utils/readmeLinks"
+import { AuthService } from "@/src/domain/services/AuthService"
+import { toast } from "sonner"
 
 interface Props {
   readme: string | null
   license: string | null
   tree: RepoTreeEntry[] | null
+  schemaFields?: Array<{ key: string; type: string; required?: boolean; defaultValue?: string; values?: string[] }>
+  modules?: Array<{ name: string; enabled?: boolean }>
+  hasGenerate?: boolean
+  slug?: string
   repoUrl?: string | null
   branch?: string | null
 }
 
-type Tab = "readme" | "license" | "files"
+type Tab = "readme" | "license" | "files" | "schema"
 
 interface FileTreeNode {
   name: string
@@ -30,7 +36,7 @@ interface BuilderNode {
   children: Map<string, BuilderNode>
 }
 
-function buildFileTree(entries: RepoTreeEntry[]): FileTreeNode[] {
+function buildFileTree(entries: Array<{ path?: string; type: "blob" | "tree" }>): FileTreeNode[] {
   const root: BuilderNode = {
     name: "",
     path: "",
@@ -38,7 +44,9 @@ function buildFileTree(entries: RepoTreeEntry[]): FileTreeNode[] {
     children: new Map(),
   }
 
-  const sorted = [...entries].sort((a, b) => a.path.localeCompare(b.path))
+  const sorted = entries
+    .filter((entry): entry is { path: string; type: "blob" | "tree" } => typeof entry.path === "string" && entry.path.trim() !== "")
+    .sort((a, b) => a.path.localeCompare(b.path))
 
   for (const entry of sorted) {
     const parts = entry.path.split("/").filter(Boolean)
@@ -109,6 +117,30 @@ function collectFolderPaths(nodes: FileTreeNode[]): string[] {
   return folderPaths
 }
 
+function normalizeType(raw: string): string {
+  return raw.trim().toLowerCase()
+}
+
+function coerceInputValue(type: string, rawValue: string): unknown {
+  const normalized = normalizeType(type)
+
+  if (normalized === "bool" || normalized === "boolean") {
+    return rawValue.toLowerCase() === "true"
+  }
+
+  if (normalized === "int" || normalized === "integer") {
+    const n = Number.parseInt(rawValue, 10)
+    return Number.isNaN(n) ? rawValue : n
+  }
+
+  if (normalized === "number" || normalized === "float" || normalized === "double") {
+    const n = Number(rawValue)
+    return Number.isNaN(n) ? rawValue : n
+  }
+
+  return rawValue
+}
+
 function TreeView({
   nodes,
   expandedPaths,
@@ -165,13 +197,27 @@ function TreeView({
   )
 }
 
-export function PlateContentTabs({ readme, license, tree, repoUrl, branch }: Props) {
+export function PlateContentTabs({
+  readme,
+  license,
+  tree,
+  schemaFields = [],
+  modules = [],
+  hasGenerate: hasGenerateProp = false,
+  slug,
+  repoUrl,
+  branch,
+}: Props) {
   const [active, setActive] = useState<Tab>("readme")
   const [MarkdownComponent, setMarkdownComponent] = useState<React.ComponentType<Record<string, unknown>> | null>(null)
   const [plugins, setPlugins] = useState<unknown[]>([])
   const treeNodes = useMemo(() => (tree ? buildFileTree(tree) : []), [tree])
   const folderPaths = useMemo(() => collectFolderPaths(treeNodes), [treeNodes])
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
+  const hasGenerate = hasGenerateProp || schemaFields.length > 0
+  const [downloadValues, setDownloadValues] = useState<Record<string, string>>({})
+  const [moduleValues, setModuleValues] = useState<Record<string, boolean>>({})
+  const [isGenerating, setIsGenerating] = useState(false)
 
   useEffect(() => {
     const topLevelFolders = treeNodes
@@ -207,9 +253,29 @@ export function PlateContentTabs({ readme, license, tree, repoUrl, branch }: Pro
   }, [])
 
   useEffect(() => {
+    const next: Record<string, string> = {}
+    for (const field of schemaFields) {
+      next[field.key] = field.defaultValue ?? ""
+    }
+    setDownloadValues(next)
+  }, [schemaFields])
+
+  useEffect(() => {
+    const next: Record<string, boolean> = {}
+    for (const mod of modules) {
+      next[mod.name] = Boolean(mod.enabled)
+    }
+    setModuleValues(next)
+  }, [modules])
+
+  useEffect(() => {
     const syncFromHash = () => {
       if (window.location.hash === "#files" && tree && tree.length > 0) {
         setActive("files")
+        return
+      }
+      if (window.location.hash === "#schema" && hasGenerate) {
+        setActive("schema")
         return
       }
       if (window.location.hash === "#license" && license) {
@@ -229,6 +295,10 @@ export function PlateContentTabs({ readme, license, tree, repoUrl, branch }: Pro
         setActive("license")
         return
       }
+      if (hasGenerate) {
+        setActive("schema")
+        return
+      }
       if (tree && tree.length > 0) {
         setActive("files")
       }
@@ -237,9 +307,69 @@ export function PlateContentTabs({ readme, license, tree, repoUrl, branch }: Pro
     syncFromHash()
     window.addEventListener("hashchange", syncFromHash)
     return () => window.removeEventListener("hashchange", syncFromHash)
-  }, [readme, license, tree])
+  }, [readme, license, tree, hasGenerate])
 
   const content = active === "readme" ? readme : active === "license" ? license : null
+
+  const handleGenerateDownload = async () => {
+    const missingRequired = schemaFields
+      .filter((field) => field.required)
+      .filter((field) => !(downloadValues[field.key] ?? "").trim())
+
+    if (missingRequired.length > 0) {
+      toast.error(`Please fill required fields: ${missingRequired.map((f) => f.key).join(", ")}`)
+      return
+    }
+
+    const values: Record<string, unknown> = {}
+    for (const field of schemaFields) {
+      const raw = (downloadValues[field.key] ?? "").trim()
+      if (!raw) continue
+      values[field.key] = coerceInputValue(field.type, raw)
+    }
+    for (const mod of modules) {
+      values[`modules.${mod.name}.enabled`] = Boolean(moduleValues[mod.name])
+    }
+
+    try {
+      setIsGenerating(true)
+      const token = AuthService.getToken()
+      const slugFromPath = slug || window.location.pathname.split("/").filter(Boolean).pop() || "plate"
+      const res = await fetch(`/api/generate/${encodeURIComponent(slugFromPath)}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ values }),
+      })
+
+      if (!res.ok) {
+        let message = "Failed to generate project"
+        try {
+          const data = await res.json() as { error?: string }
+          if (data.error) message = data.error
+        } catch {}
+        throw new Error(message)
+      }
+
+      const blob = await res.blob()
+      const objectUrl = window.URL.createObjectURL(blob)
+      const anchor = document.createElement("a")
+      anchor.href = objectUrl
+      anchor.download = `${slugFromPath}.zip`
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+      window.URL.revokeObjectURL(objectUrl)
+      toast.success("Project generated and download started")
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to generate project"
+      toast.error(message)
+    } finally {
+      setIsGenerating(false)
+    }
+  }
 
   const branchResolved = (branch && branch.trim()) || "main"
   const githubRepo = repoUrl?.trim() ? repoUrl : undefined
@@ -303,7 +433,169 @@ export function PlateContentTabs({ readme, license, tree, repoUrl, branch }: Pro
   return (
     <div>
       <div>
-        {active === "files" ? (
+        {active === "schema" ? (
+          hasGenerate ? (
+            <div className="space-y-5 border border-border bg-card p-6">
+              {schemaFields.length > 0 ? (
+                <div>
+                  <p className="mb-2 text-sm font-semibold text-foreground">Schema fields</p>
+                  <div className="overflow-auto border border-border bg-background">
+                    <table className="w-full min-w-[640px] text-xs">
+                      <thead className="bg-card text-muted-foreground">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium">Field</th>
+                          <th className="px-3 py-2 text-left font-medium">Type</th>
+                          <th className="px-3 py-2 text-left font-medium">Required</th>
+                          <th className="px-3 py-2 text-left font-medium">Default</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {schemaFields.map((field, index) => {
+                          const isEven = index % 2 === 0
+                          const tone = isEven ? "bg-background" : "bg-muted/60 dark:bg-card"
+                          const hasValues = Boolean(field.values && field.values.length > 0)
+
+                          return (
+                            <Fragment key={field.key}>
+                              <tr key={`${field.key}-main`} className={`border-t border-border/70 ${tone}`}>
+                                <td className="px-3 pb-0.5 pt-2 align-top">
+                                  <div className="font-mono text-[13px] text-foreground">{field.key}</div>
+                                </td>
+                                <td className="px-3 pb-0.5 pt-2 align-top text-foreground">{field.type}</td>
+                                <td className="px-3 pb-0.5 pt-2 align-top text-foreground">{field.required ? "yes" : "no"}</td>
+                                <td className="px-3 pb-0.5 pt-2 align-top text-muted-foreground">{field.defaultValue || "-"}</td>
+                              </tr>
+                              {hasValues ? (
+                                <tr key={`${field.key}-meta`} className={tone}>
+                                  <td colSpan={4} className="px-3 pb-2 pt-0.5 text-muted-foreground">
+                                    <div className="flex flex-wrap gap-2">
+                                      {field.values!.map((value) => (
+                                        <span
+                                          key={`${field.key}-${value}`}
+                                          className="border border-border/70 bg-background px-1.5 py-0.5 font-mono text-[10px] text-foreground"
+                                        >
+                                          {value}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </td>
+                                </tr>
+                              ) : null}
+                            </Fragment>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : null}
+
+              {modules.length > 0 ? (
+                <div>
+                  <p className="mb-2 text-sm font-semibold text-foreground">Modules</p>
+                  <div className="flex flex-wrap gap-2">
+                    {modules.map((mod) => (
+                      <span key={mod.name} className="border border-border bg-background px-2 py-1 text-xs text-foreground">
+                        <span className="font-mono">{mod.name}</span>
+                        <span className="ml-1 text-muted-foreground">default {mod.enabled ? "on" : "off"}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="space-y-3 border border-border bg-background p-3">
+                <p className="text-sm font-semibold text-foreground">Build and download project</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {schemaFields.map((field) => {
+                    const normalized = normalizeType(field.type)
+                    const hasEnum = Array.isArray(field.values) && field.values.length > 0
+
+                    return (
+                      <label key={`input-${field.key}`} className="grid gap-1">
+                        <span className="text-[11px] text-muted-foreground">
+                          {field.key}
+                          {field.required ? " *" : ""}
+                        </span>
+                        {hasEnum ? (
+                          <select
+                            className="h-8 border border-border bg-background px-2 text-xs"
+                            value={downloadValues[field.key] ?? ""}
+                            onChange={(e) => setDownloadValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                          >
+                            <option value="">Select value</option>
+                            {field.values!.map((value) => (
+                              <option key={`${field.key}-${value}`} value={value}>
+                                {value}
+                              </option>
+                            ))}
+                          </select>
+                        ) : normalized === "bool" || normalized === "boolean" ? (
+                          <select
+                            className="h-8 border border-border bg-background px-2 text-xs"
+                            value={downloadValues[field.key] ?? ""}
+                            onChange={(e) => setDownloadValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                          >
+                            <option value="">Select value</option>
+                            <option value="true">true</option>
+                            <option value="false">false</option>
+                          </select>
+                        ) : (
+                          <input
+                            className="h-8 border border-border bg-background px-2 text-xs"
+                            type={(normalized === "int" || normalized === "integer" || normalized === "number" || normalized === "float" || normalized === "double") ? "number" : "text"}
+                            step={normalized === "int" || normalized === "integer" ? "1" : "any"}
+                            value={downloadValues[field.key] ?? ""}
+                            placeholder={field.defaultValue ?? ""}
+                            onChange={(e) => setDownloadValues((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                          />
+                        )}
+                      </label>
+                    )
+                  })}
+                </div>
+                {modules.length > 0 ? (
+                  <div className="space-y-2 border-t border-border pt-3">
+                    <p className="text-xs font-semibold text-foreground">Modules</p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {modules.map((mod) => (
+                        <label
+                          key={`toggle-${mod.name}`}
+                          className="flex h-8 items-center justify-between border border-border bg-background px-2 text-xs"
+                        >
+                          <span className="font-mono text-foreground">{mod.name}</span>
+                          <input
+                            type="checkbox"
+                            checked={Boolean(moduleValues[mod.name])}
+                            onChange={(e) =>
+                              setModuleValues((prev) => ({
+                                ...prev,
+                                [mod.name]: e.target.checked,
+                              }))
+                            }
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={handleGenerateDownload}
+                  disabled={isGenerating}
+                  className="inline-flex h-8 items-center gap-2 border border-border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                  {isGenerating ? "Generating..." : "Generate and download ZIP"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-6">
+              <p className="py-4 text-center text-sm text-muted-foreground">No generation schema found</p>
+            </div>
+          )
+        ) : active === "files" ? (
           treeNodes.length > 0 ? (
             <div className="border border-border bg-card p-6">
               <div className="mb-4 flex items-center justify-end gap-2 border-b border-border pb-3">

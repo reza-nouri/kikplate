@@ -11,11 +11,11 @@ var submitCmd = &cobra.Command{
 	Use:   "submit [repo-url]",
 	Short: "Submit a repository as a new plate",
 	Long: `Submit a GitHub repository to the Kikplate server.
-The repository must contain a kickplate.yaml manifest.
+The repository must contain a plate.yaml manifest.
 After submission the plate will be in "pending" status until verified.`,
-	Example: `  kikplate submit https://github.com/org/repo
-  kikplate submit https://github.com/org/repo --branch develop
-  kikplate submit https://github.com/org/repo --org <org-id>`,
+	Example: `  kik submit https://github.com/org/repo
+  kik submit https://github.com/org/repo --branch develop
+  kik submit https://github.com/org/repo --org <org-id>`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		s, err := NewAuthSession(cmd)
@@ -47,8 +47,8 @@ After submission the plate will be in "pending" status until verified.`,
 		fmt.Printf("  Status:   %s\n", plate.Status)
 		if plate.VerificationToken != nil {
 			fmt.Printf("\nVerification token: %s\n", *plate.VerificationToken)
-			fmt.Println("Add this token to your kickplate.yaml as 'verification_token',")
-			fmt.Println("then run: kikplate verify " + plate.Slug)
+			fmt.Println("Add this token to your plate.yaml as 'verification_token',")
+			fmt.Println("then run: kik verify " + plate.Slug)
 		}
 		return nil
 	},

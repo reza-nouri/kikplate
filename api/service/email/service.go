@@ -50,6 +50,13 @@ func (s *Service) SendPasswordChanged(to string) error {
 	return s.send(to, "Your password was changed", renderTemplate("password_change.html", s.templateData(nil)))
 }
 
+func (s *Service) SendPasswordResetEmail(to, name, resetURL string) error {
+	return s.send(to, "Reset your Kikplate password", renderTemplate("password_reset.html", s.templateData(map[string]any{
+		"Name":     name,
+		"ResetURL": resetURL,
+	})))
+}
+
 func (s *Service) SendLikeNotification(to, likedBy string) error {
 	return s.send(to, "Someone liked you!", renderTemplate("like_notification.html", s.templateData(map[string]any{
 		"LikedBy": likedBy,

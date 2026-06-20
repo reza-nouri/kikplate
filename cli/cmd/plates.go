@@ -61,7 +61,7 @@ var platesAddCmd = &cobra.Command{
 	Short: "Add a plate locally by its slug",
 	Long: `Look up a plate on the Kikplate server by its slug (e.g. owner/repo)
 and add it to your local plate list.`,
-	Example: `  kikplate plates add myorg/my-template`,
+	Example: `  kik plates add myorg/my-template`,
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		s, err := NewSession(cmd)
@@ -105,7 +105,7 @@ var platesListCmd = &cobra.Command{
 			return fmt.Errorf("cannot load local plates: %w", err)
 		}
 		if len(plates) == 0 {
-			fmt.Println("No plates added yet. Use 'kikplate plates add <slug>' to add one.")
+			fmt.Println("No plates added yet. Use 'kik plates add <slug>' to add one.")
 			return nil
 		}
 		t := NewTable("SLUG", "NAME", "DESCRIPTION", "SERVER")
@@ -120,7 +120,7 @@ var platesListCmd = &cobra.Command{
 var platesRemoveCmd = &cobra.Command{
 	Use:     "remove [slug]",
 	Short:   "Remove a plate from the local list",
-	Example: `  kikplate plates remove myorg/my-template`,
+	Example: `  kik plates remove myorg/my-template`,
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		slug := args[0]

@@ -11,6 +11,7 @@ Welcome to the Kikplate wiki.
 ## Reference
 
 - [CLI](cli.md)
+- [Generator Tutorial](generator-tutorial.md)
 - [Database](database.md)
 - [Architecture](architecture.md)
 - [Kubernetes](kubernetes.md)

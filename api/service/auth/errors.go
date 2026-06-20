@@ -15,4 +15,5 @@ var (
 	ErrProviderNotFound        = errors.New("oauth provider not configured")
 	ErrOAuthFailed             = errors.New("oauth authentication failed")
 	ErrInvalidUsername         = errors.New("username cannot be empty")
+	ErrWeakPassword            = errors.New("password must be at least 8 characters")
 )

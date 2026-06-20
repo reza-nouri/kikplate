@@ -25,6 +25,12 @@ class AuthRepository implements IAuthRepository {
   setUsername(username: string): Promise<{ message: string }> {
     return http.patch("/me/username", { username })
   }
+  requestPasswordReset(email: string): Promise<{ message: string }> {
+    return http.post("/auth/request-password-reset", { email })
+  }
+  resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    return http.post("/auth/reset-password", { token, new_password: newPassword })
+  }
   oauthRedirectURL(provider: string): string {
     return `${CLIENT_API_BASE}/auth/${provider}/redirect`
   }

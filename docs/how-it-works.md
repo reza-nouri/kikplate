@@ -8,9 +8,9 @@ This document explains the core concepts of Kikplate and walks through the full 
 
 A plate is a project template backed by a public GitHub repository. It is the central entity in Kikplate. When a developer finds a plate they like, they can scaffold a new project from it in seconds using the CLI.
 
-Every plate must have a `kikplate.yaml` manifest at the root of its repository. That file is the contract between the repository author and the Kikplate platform.
+Every plate must have a `plate.yaml` manifest at the root of its repository. That file is the contract between the repository author and the Kikplate platform.
 
-### kikplate.yaml
+### plate.yaml
 
 The manifest describes the plate to the platform. A minimal example:
 
@@ -61,7 +61,7 @@ Badges are quality signals awarded to plates. They are defined in `config/config
 
 ### Organization
 
-Organizations are named namespaces that group plates under a shared identity. A user creates an organization, and other users can submit plates under that organization's name. The `kikplate.yaml` owner field must match the organization name for organization-scoped plates.
+Organizations are named namespaces that group plates under a shared identity. A user creates an organization, and other users can submit plates under that organization's name. The `plate.yaml` owner field must match the organization name for organization-scoped plates.
 
 ## Plate Lifecycle
 
@@ -85,7 +85,7 @@ kikplate submit https://github.com/myorg/my-template
 
 When a plate is submitted, Kikplate:
 
-1. Fetches `kikplate.yaml` from the specified repository and branch.
+1. Fetches `plate.yaml` from the specified repository and branch.
 2. Validates that the `owner` field matches the authenticated user's username (or organization name if submitted under an organization).
 3. Creates a plate record with `status=pending` and `visibility=private`.
 4. Generates a `verification_token` and stores it on the plate.
@@ -94,7 +94,7 @@ The verification token is returned in the submission response and printed by the
 
 ### Step 2: Verification
 
-The owner adds the `verification_token` to their `kikplate.yaml`, commits it, and then calls:
+The owner adds the `verification_token` to their `plate.yaml`, commits it, and then calls:
 
 ```
 POST /plates/{id}/verify
@@ -106,7 +106,7 @@ Or using the CLI:
 kikplate verify myorg/my-template
 ```
 
-Kikplate re-fetches `kikplate.yaml` and checks that the token in the file matches the one stored in the database. If they match, the plate transitions to `status=approved`, `visibility=public`, `is_verified=true`.
+Kikplate re-fetches `plate.yaml` and checks that the token in the file matches the one stored in the database. If they match, the plate transitions to `status=approved`, `visibility=public`, `is_verified=true`.
 
 The plate is now publicly discoverable and searchable.
 
@@ -116,7 +116,7 @@ After a plate is approved, the sync worker monitors the repository on a schedule
 
 For each due plate, the sync worker:
 
-1. Fetches `kikplate.yaml` from GitHub.
+1. Fetches `plate.yaml` from GitHub.
 2. Validates the verification token is still present and correct.
 3. If valid: updates the plate metadata and tags, sets `sync_status=synced`, and schedules the next sync.
 4. If the token is missing or wrong: sets `sync_status=unverified` and forces `visibility=private`. The plate is effectively taken offline until the owner verifies again.
@@ -173,7 +173,7 @@ The CLI:
 
 1. Looks up the plate in your local list or queries the server.
 2. Clones the repository into `my-new-project/`.
-3. Strips the `kikplate.yaml` manifest (it is the template author's file, not yours).
+3. Strips the `plate.yaml` manifest (it is the template author's file, not yours).
 4. Creates a `.kikplate.origin` file recording where the project came from.
 5. Optionally stamps the README with a "Scaffolded from" footer.
 
@@ -184,3 +184,85 @@ kikplate scaffold myorg/my-template https://github.com/you/new-repo.git
 ```
 
 This creates a clean initial commit and pushes to the remote.
+
+## Generating a Project
+
+Generation is schema driven. Instead of cloning a repository as is, Kikplate resolves a plate schema, validates input values, renders templates, and returns a zip archive.
+
+### Endpoints
+
+```
+GET /generate/{slug}/schema
+POST /generate/{slug}
+```
+
+`GET /generate/{slug}/schema` returns the generation contract for a plate.
+
+`POST /generate/{slug}` accepts:
+
+```json
+{
+  "values": {
+    "projectName": "my-app",
+    "modulePath": "github.com/you/my-app",
+    "modules.docker.enabled": true
+  }
+}
+```
+
+The response body is `application/zip` and includes `X-Generation-ID` in headers.
+
+### Value Handling
+
+Schema defaults are applied automatically.
+
+Required fields are enforced before rendering.
+
+Types are validated and coerced for common scalar types.
+
+Supported scalar types include `string`, `bool`, `int`, `number`, and `enum`.
+
+### Conditional Files
+
+Each file entry in `plate.yaml` can include `condition`.
+
+Conditions support dotted lookups and boolean expressions with `!`, `&&`, `||`, `==`, and `!=`.
+
+Examples:
+
+```yaml
+condition: modules.docker.enabled
+condition: database == postgres
+condition: modules.auth.enabled && database != none
+```
+
+### Template Helpers
+
+Templates can use helper functions:
+
+`lower`
+
+`upper`
+
+`trim`
+
+`replace`
+
+`default`
+
+`slugify`
+
+Example:
+
+```gotemplate
+module {{ .modulePath | default "github.com/acme/app" }}
+image: {{ slugify .projectName }}
+```
+
+### Output Safety
+
+Rendered file paths are normalized before archiving.
+
+Absolute paths and parent directory traversal are rejected.
+
+This prevents unsafe output entries inside generated archives.

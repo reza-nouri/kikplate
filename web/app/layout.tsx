@@ -13,7 +13,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "kikplate — template registry",
-  description: "Discover, share, and scaffold production-ready project templates.",
+  description: "Discover, share, and generate production-ready projects from reusable templates.",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

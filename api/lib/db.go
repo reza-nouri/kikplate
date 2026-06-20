@@ -161,12 +161,14 @@ func NewDatabase(env Env, logger Logger) Database {
 		&model.Account{},
 		&model.Organization{},
 		&model.EmailVerification{},
+		&model.PasswordReset{},
 		&model.Plate{},
 		&model.PlateTag{},
 		&model.PlateMember{},
 		&model.PlateReview{},
 		&model.Badge{},
 		&model.PlateBadge{},
+		&model.Generation{},
 	); err != nil {
 		logger.Panicf("AutoMigrate failed: %v", err)
 	}

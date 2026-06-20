@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Copy, Check, X, Terminal, GitBranch } from "lucide-react"
+import { Copy, Check, X, Terminal } from "lucide-react"
 import { toast } from "sonner"
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
   onClose: () => void
   repoUrl?: string
   slug: string
+  generateCommand?: string
 }
 
 function CopyField({ label, icon, value }: { label: string; icon: React.ReactNode; value: string }) {
@@ -29,7 +30,7 @@ function CopyField({ label, icon, value }: { label: string; icon: React.ReactNod
         <span>{label}</span>
       </div>
       <div className="flex items-center gap-0 border border-border">
-        <code className="flex-1 truncate bg-muted/20 px-3 py-2.5 text-xs font-mono text-foreground">
+              <code className="flex-1 break-all bg-muted/20 px-3 py-2.5 text-xs font-mono text-foreground">
           {value}
         </code>
         <button
@@ -46,7 +47,8 @@ function CopyField({ label, icon, value }: { label: string; icon: React.ReactNod
   )
 }
 
-export function UseModal({ open, onClose, repoUrl, slug }: Props) {
+export function UseModal({ open, onClose, slug, generateCommand }: Props) {
+
   if (!open) return null
 
   return (
@@ -56,7 +58,7 @@ export function UseModal({ open, onClose, repoUrl, slug }: Props) {
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-md border border-border bg-background shadow-none">
+      <div className="relative w-full max-w-2xl border border-border bg-background shadow-none">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="text-sm font-semibold">Use this plate</h2>
           <button
@@ -72,19 +74,19 @@ export function UseModal({ open, onClose, repoUrl, slug }: Props) {
             Choose how you want to use this template:
           </p>
 
-          {repoUrl && (
-            <CopyField
-              label="Clone with Git"
-              icon={<GitBranch className="h-3.5 w-3.5" />}
-              value={`git clone ${repoUrl}`}
-            />
-          )}
-
           <CopyField
-            label="Scaffold with KikPlate CLI"
+            label="Scaffold with kik CLI"
             icon={<Terminal className="h-3.5 w-3.5" />}
-            value={`kikplate scaf ${slug}`}
+            value={`kik scaf ${slug}`}
           />
+
+          {generateCommand ? (
+            <CopyField
+              label="Generate with kik CLI"
+              icon={<Terminal className="h-3.5 w-3.5" />}
+              value={generateCommand}
+            />
+          ) : null}
 
           <div className="border-t border-border pt-4">
             <p className="text-xs text-muted-foreground">
@@ -94,7 +96,7 @@ export function UseModal({ open, onClose, repoUrl, slug }: Props) {
                 onClick={onClose}
                 className="text-foreground underline underline-offset-4 hover:text-foreground/90"
               >
-                Install kikplate
+                Install kik
               </Link>
             </p>
           </div>

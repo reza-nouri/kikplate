@@ -69,6 +69,11 @@ export function LoginForm() {
             required
             autoComplete="current-password"
           />
+          <div className="text-right">
+            <Link href="/forgot-password" className="text-sm text-foreground underline underline-offset-4 hover:text-primary">
+              Forgot password?
+            </Link>
+          </div>
         </div>
         <Button type="submit" className="w-full" disabled={login.isPending}>
           {login.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

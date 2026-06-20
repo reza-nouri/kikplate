@@ -33,8 +33,7 @@ func (s *ServeCommand) Run() lib.CommandRunner {
 	) {
 		seedBadges(env, logger, badgeRepo)
 
-		handler.Mux.Use(middleware.Authenticate(env, logger))
-		handler.Mux.Use(middleware.HeaderAuth(env, accountRepo, logger))
+		// CORS middleware first
 		handler.Mux.Use(func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
@@ -47,6 +46,11 @@ func (s *ServeCommand) Run() lib.CommandRunner {
 				next.ServeHTTP(w, r)
 			})
 		})
+
+		// Optional authentication (non-blocking, just extracts token if present)
+		handler.Mux.Use(middleware.Authenticate(env, logger))
+		handler.Mux.Use(middleware.HeaderAuth(env, accountRepo, logger))
+
 		r.Setup()
 
 		addr := fmt.Sprintf(":%s", env.ServerPort)

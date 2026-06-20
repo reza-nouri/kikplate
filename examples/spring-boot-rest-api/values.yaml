@@ -1,0 +1,24 @@
+projectName: task-service
+appName: Task Service API
+groupId: com.acme
+artifactId: task-service
+packageName: com.acme.taskservice
+javaVersion: 21
+serverPort: 8082
+apiBasePath: /api/v1
+database: postgres
+postgresHost: localhost
+postgresPort: 5432
+postgresDatabase: taskdb
+postgresUser: task_user
+postgresPassword: task_password
+
+modules:
+  docker:
+    enabled: true
+  swagger:
+    enabled: true
+  actuator:
+    enabled: true
+  seedData:
+    enabled: true

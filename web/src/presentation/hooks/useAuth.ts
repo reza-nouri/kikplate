@@ -105,3 +105,16 @@ export function useProviders() {
     staleTime: Infinity,
   })
 }
+
+export function useRequestPasswordReset() {
+  return useMutation({
+    mutationFn: (email: string) => authRepository.requestPasswordReset(email),
+  })
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: ({ token, newPassword }: { token: string; newPassword: string }) =>
+      authRepository.resetPassword(token, newPassword),
+  })
+}

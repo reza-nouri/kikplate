@@ -226,9 +226,9 @@ Supported `tier` values are `official` and `community`. Badge icons use the Luci
 
 ### plate_categories
 
-Defines the **allowed plate taxonomy**: which `category` values are valid in `kikplate.yaml`, how they appear in the web app (home “browse by category”, explore filters, stats), and how the API normalizes categories when ingesting manifests.
+Defines the **allowed plate taxonomy**: which `category` values are valid in `plate.yaml`, how they appear in the web app (home “browse by category”, explore filters, stats), and how the API normalizes categories when ingesting manifests.
 
-#### `category` in `kikplate.yaml`
+#### `category` in `plate.yaml`
 
 Repository authors set `category` to the **`slug`** of one entry in `plate_categories`. Matching is **case-insensitive** after trimming whitespace. If the field is omitted, empty, or not in the list, the stored category becomes the slug used for “other” (by default `other`). Submit and sync **do not fail** on a bad category value.
 

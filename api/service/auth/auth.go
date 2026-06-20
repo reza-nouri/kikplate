@@ -18,6 +18,8 @@ type AuthService interface {
 	DeleteMe(ctx context.Context, accountID uuid.UUID) error
 	SetUsername(ctx context.Context, accountID uuid.UUID, username string) error
 	UpdateProfile(ctx context.Context, accountID uuid.UUID, input UpdateProfileInput) (*MeResult, error)
+	RequestPasswordReset(ctx context.Context, email string) error
+	ResetPassword(ctx context.Context, token string, newPassword string) error
 }
 
 type UpdateProfileInput struct {

@@ -1,0 +1,15 @@
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+
+	"{{ .modulePath }}/internal/server"
+)
+
+func main() {
+	srv := server.New(":{{ .port }}")
+	fmt.Printf("{{ .projectName }} listening on port {{ .port }}\n")
+	log.Fatal(srv.ListenAndServe())
+}

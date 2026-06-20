@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: {{ .appName }}
+  datasource:
+    {{ if eq .database "postgres" }}
+    url: jdbc:postgresql://{{ .postgresHost }}:{{ .postgresPort }}/{{ .postgresDatabase }}
+    username: {{ .postgresUser }}
+    password: {{ .postgresPassword }}
+    driver-class-name: org.postgresql.Driver
+    {{ else }}
+    url: jdbc:h2:mem:{{ .artifactId }};MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+    {{ end }}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  {{ if eq .database "h2" }}
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  {{ end }}
+
+server:
+  port: {{ .serverPort }}
+
+{{ if .modules.actuator.enabled }}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+{{ end }}

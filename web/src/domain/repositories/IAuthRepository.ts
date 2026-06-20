@@ -4,6 +4,8 @@ export interface IAuthRepository {
   register(input: RegisterInput): Promise<{ message: string }>
   login(input: LoginInput): Promise<AuthResult>
   verifyEmail(token: string): Promise<AuthResult>
+  requestPasswordReset(email: string): Promise<{ message: string }>
+  resetPassword(token: string, newPassword: string): Promise<{ message: string }>
   me(): Promise<MeResult>
   deleteMe(): Promise<void>
   updateProfile(input: { display_name?: string; avatar_url?: string }): Promise<MeResult>

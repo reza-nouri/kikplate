@@ -22,32 +22,41 @@ import (
 )
 
 type authService struct {
-	userRepo     repository.UserRepository
-	accountRepo  repository.AccountRepository
-	emailVerRepo repository.EmailVerificationRepository
-	logger       lib.Logger
-	env          lib.Env
-	db           *gorm.DB
-	emitter      *events.EventEmitter
+	userRepo          repository.UserRepository
+	accountRepo       repository.AccountRepository
+	emailVerRepo      repository.EmailVerificationRepository
+	passwordResetRepo repository.PasswordResetRepository
+	logger            lib.Logger
+	env               lib.Env
+	db                *gorm.DB
+	emitter           *events.EventEmitter
 }
+
+const (
+	passwordResetCooldownInterval = time.Minute
+	passwordResetWindowInterval   = time.Hour
+	passwordResetWindowMax        = 5
+)
 
 func NewAuthService(
 	userRepo repository.UserRepository,
 	accountRepo repository.AccountRepository,
 	emailVerRepo repository.EmailVerificationRepository,
+	passwordResetRepo repository.PasswordResetRepository,
 	db lib.Database,
 	logger lib.Logger,
 	env lib.Env,
 	emitter *events.EventEmitter,
 ) AuthService {
 	return &authService{
-		userRepo:     userRepo,
-		accountRepo:  accountRepo,
-		emailVerRepo: emailVerRepo,
-		logger:       logger,
-		env:          env,
-		db:           db.DB,
-		emitter:      emitter,
+		userRepo:          userRepo,
+		accountRepo:       accountRepo,
+		emailVerRepo:      emailVerRepo,
+		passwordResetRepo: passwordResetRepo,
+		logger:            logger,
+		env:               env,
+		db:                db.DB,
+		emitter:           emitter,
 	}
 }
 
@@ -719,6 +728,9 @@ func (s *authService) DeleteMe(ctx context.Context, accountID uuid.UUID) error {
 				if err := tx.Where("user_id = ?", *account.UserID).Delete(&model.EmailVerification{}).Error; err != nil {
 					return err
 				}
+				if err := tx.Where("user_id = ?", *account.UserID).Delete(&model.PasswordReset{}).Error; err != nil {
+					return err
+				}
 				if err := tx.Where("id = ?", *account.UserID).Delete(&model.User{}).Error; err != nil {
 					return err
 				}
@@ -727,4 +739,142 @@ func (s *authService) DeleteMe(ctx context.Context, accountID uuid.UUID) error {
 
 		return nil
 	})
+}
+
+func (s *authService) RequestPasswordReset(ctx context.Context, email string) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+	if email == "" {
+		return nil
+	}
+
+	user, err := s.userRepo.GetByEmail(ctx, email)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return nil
+	}
+
+	cooldownCount, err := s.passwordResetRepo.CountByUserSince(ctx, user.ID, time.Now().Add(-passwordResetCooldownInterval))
+	if err != nil {
+		return err
+	}
+	if cooldownCount > 0 {
+		return nil
+	}
+
+	windowCount, err := s.passwordResetRepo.CountByUserSince(ctx, user.ID, time.Now().Add(-passwordResetWindowInterval))
+	if err != nil {
+		return err
+	}
+	if windowCount >= passwordResetWindowMax {
+		return nil
+	}
+
+	if !s.env.SMTP.IsConfigured() {
+		return ErrSMTPNotConfigured
+	}
+
+	ttl := 24 * time.Hour
+	if s.env.EmailVerification.TokenTTL != "" {
+		parsed, err := time.ParseDuration(s.env.EmailVerification.TokenTTL)
+		if err == nil && parsed > 0 {
+			ttl = parsed
+		}
+	}
+
+	rawToken := uuid.New().String()
+	hashed := fmt.Sprintf("%x", sha256.Sum256([]byte(rawToken)))
+
+	pr := &model.PasswordReset{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		Token:     hashed,
+		IsUsed:    false,
+		ExpiresAt: time.Now().Add(ttl),
+	}
+	if err := s.passwordResetRepo.Create(ctx, pr); err != nil {
+		return err
+	}
+
+	resetURL, err := s.buildPasswordResetURL(rawToken)
+	if err != nil {
+		return err
+	}
+
+	s.emitter.Emit(events.PasswordResetRequested, events.PasswordResetRequestedPayload{
+		Email:    user.Email,
+		Name:     user.Username,
+		ResetURL: resetURL,
+	})
+
+	return nil
+}
+
+func (s *authService) ResetPassword(ctx context.Context, token string, newPassword string) error {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return ErrTokenInvalid
+	}
+
+	if len(newPassword) < 8 {
+		return ErrWeakPassword
+	}
+
+	hashed := fmt.Sprintf("%x", sha256.Sum256([]byte(token)))
+
+	pr, err := s.passwordResetRepo.GetByToken(ctx, hashed)
+	if err != nil {
+		return err
+	}
+	if pr == nil {
+		return ErrTokenInvalid
+	}
+
+	user, err := s.userRepo.GetByID(ctx, pr.UserID)
+	if err != nil {
+		return err
+	}
+	if user == nil {
+		return ErrNotFound
+	}
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	user.PasswordHash = string(passwordHash)
+	if err := s.userRepo.Update(ctx, user); err != nil {
+		return err
+	}
+
+	if err := s.passwordResetRepo.MarkUsed(ctx, pr.ID); err != nil {
+		return err
+	}
+
+	s.emitter.Emit(events.PasswordChanged, events.PasswordChangedPayload{
+		Email: user.Email,
+	})
+
+	return nil
+}
+
+func (s *authService) buildPasswordResetURL(rawToken string) (string, error) {
+	base := strings.TrimSpace(s.env.FrontendURL)
+	if base == "" {
+		base = "http://localhost:3000"
+	}
+	base = strings.TrimRight(base, "/") + "/reset-password"
+
+	parsed, err := url.Parse(base)
+	if err != nil {
+		return "", err
+	}
+
+	query := parsed.Query()
+	query.Set("token", rawToken)
+	parsed.RawQuery = query.Encode()
+
+	return parsed.String(), nil
 }

@@ -25,8 +25,8 @@ export function SubmitRepositoryForm() {
   const isPersonalSubmission = !organizationId
   const ownerHint = selectedOrganization?.name ?? me?.username ?? "your-username"
   const [ownerCopied, setOwnerCopied] = useState(false)
-  const kikplateFileUrl = repoUrl
-    ? `${repoUrl.replace(/\.git$/, "").replace(/\/$/, "")}/blob/${branch || "main"}/kikplate.yaml`
+  const plateFileUrl = repoUrl
+    ? `${repoUrl.replace(/\.git$/, "").replace(/\/$/, "")}/blob/${branch || "main"}/plate.yaml`
     : null
 
   async function handleSubmit(e: React.FormEvent) {
@@ -49,15 +49,15 @@ export function SubmitRepositoryForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-10 lg:items-start"
+      className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-10 lg:items-start"
     >
-      <div className="border border-border bg-card lg:sticky lg:top-8 self-start">
+      <div className="border border-border bg-card lg:sticky lg:top-8 self-start order-2 lg:order-2">
         <div className="border-b border-border bg-muted/20 px-4 py-3 flex items-start gap-2.5">
           <FileCode2 className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
           <div>
             <h2 className="text-sm font-semibold text-foreground">Before you submit</h2>
             <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
-              Add <code className="font-mono bg-muted px-1 py-0.5">kikplate.yaml</code> at the repository root.{" "}
+              Add <code className="font-mono bg-muted px-1 py-0.5">plate.yaml</code> at the repository root.{" "}
               <Link
                 href="/docs?doc=how-it-works"
                 className="font-medium text-foreground underline underline-offset-2 hover:text-muted-foreground"
@@ -74,8 +74,11 @@ export function SubmitRepositoryForm() {
             <ul className="list-disc pl-4 space-y-1 mb-3">
               <li>The repository must be public.</li>
               <li>
-                It must include <code className="font-mono bg-muted px-1 py-0.5">kikplate.yaml</code> at the root on
+                It must include <code className="font-mono bg-muted px-1 py-0.5">plate.yaml</code> at the root on
                 the branch you enter below.
+              </li>
+              <li>
+                Ensure the template is generation-ready so users can produce a working project output.
               </li>
             </ul>
 
@@ -88,7 +91,7 @@ export function SubmitRepositoryForm() {
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
                   Under Repository details, leave <span className="text-foreground font-medium">Personal</span>. The
                   plate is registered on <span className="text-foreground font-medium">your user account</span> only.
-                  In <code className="font-mono bg-muted px-1 py-0.5">kikplate.yaml</code>, set{" "}
+                  In <code className="font-mono bg-muted px-1 py-0.5">plate.yaml</code>, set{" "}
                   <code className="font-mono bg-muted px-1 py-0.5">owner</code> to your Kikplate username
                   {me?.username ? (
                     <> (<span className="font-mono text-foreground">{me.username}</span>)</>
@@ -102,7 +105,7 @@ export function SubmitRepositoryForm() {
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
                   Under Repository details, choose an <span className="text-foreground font-medium">organization you own</span>.
                   The plate is registered <span className="text-foreground font-medium">under that organization</span> (not
-                  only on your user). In <code className="font-mono bg-muted px-1 py-0.5">kikplate.yaml</code>, set{" "}
+                  only on your user). In <code className="font-mono bg-muted px-1 py-0.5">plate.yaml</code>, set{" "}
                   <code className="font-mono bg-muted px-1 py-0.5">owner</code> to the{" "}
                   <span className="text-foreground font-medium">organization&apos;s exact name</span>—not your personal
                   username.
@@ -143,6 +146,11 @@ export function SubmitRepositoryForm() {
                 matching is case-insensitive; anything else or empty becomes{" "}
                 <code className="font-mono bg-muted px-1 py-0.5">other</code>),{" "}
                 <code className="font-mono bg-muted px-1 py-0.5">tags</code>.
+              </li>
+              <li>
+                You can also include <code className="font-mono bg-muted px-1 py-0.5">schema</code> and{" "}
+                <code className="font-mono bg-muted px-1 py-0.5">files</code> sections to define configurable inputs
+                and generated project files.
               </li>
               <li>
                 <span className="text-foreground">After submit:</span> add{" "}
@@ -188,7 +196,7 @@ tags:
         </div>
       </div>
 
-      <div className="min-w-0 space-y-6">
+      <div className="min-w-0 space-y-6 order-1 lg:order-1">
         <div className="space-y-4">
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Repository details
@@ -253,17 +261,17 @@ tags:
             <div className="pl-6 space-y-2 text-xs text-muted-foreground">
               <p>
                 Open{" "}
-                {kikplateFileUrl ? (
+                {plateFileUrl ? (
                   <a
-                    href={kikplateFileUrl}
+                    href={plateFileUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="font-mono underline underline-offset-2 hover:text-foreground"
                   >
-                    kikplate.yaml
+                    plate.yaml
                   </a>
                 ) : (
-                  <code className="font-mono bg-muted px-1 py-0.5">kikplate.yaml</code>
+                  <code className="font-mono bg-muted px-1 py-0.5">plate.yaml</code>
                 )}{" "}
                 and update the <code className="font-mono bg-muted px-1 py-0.5">owner</code> field, then push and try again.
               </p>
@@ -296,14 +304,14 @@ tags:
           {(errorMsg.includes("not found") || errorMsg.includes("fetch")) && (
             <p className="text-xs text-muted-foreground pl-6">
               Make sure the repository is public, the URL is correct, and
-              the <code className="font-mono bg-muted px-1 py-0.5">kikplate.yaml</code> exists
+              the <code className="font-mono bg-muted px-1 py-0.5">plate.yaml</code> exists
               on the <code className="font-mono bg-muted px-1 py-0.5">{branch}</code> branch.
             </p>
           )}
           {errorMsg.includes("conflict") && (
             <p className="text-xs text-muted-foreground pl-6">
               A plate with this name already exists. Rename your plate in{" "}
-              <code className="font-mono bg-muted px-1 py-0.5">kikplate.yaml</code> and try again.
+              <code className="font-mono bg-muted px-1 py-0.5">plate.yaml</code> and try again.
             </p>
           )}
         </div>

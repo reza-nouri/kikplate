@@ -96,7 +96,7 @@ export function HeroSearch() {
         </h1>
 
         <p className="text-base sm:text-lg text-muted-foreground max-w-xl leading-relaxed">
-          Discover, share and scaffold production-ready project templates. Built by the community, for the community.
+          Discover, share and generate production-ready projects from reusable templates. Built by the community, for the community.
         </p>
 
         <div className="w-full max-w-4xl mt-2" ref={containerRef}>

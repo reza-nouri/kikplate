@@ -39,15 +39,15 @@ export default function SubmitPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b border-border bg-muted/10">
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto max-w-7xl px-4 py-8">
           <h1 className="text-2xl font-bold text-foreground">Submit a plate</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Share a project template with the community.
+            Share a reusable template others can generate into ready-to-use projects.
           </p>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-10 max-w-6xl">
+      <div className="container mx-auto max-w-7xl px-4 py-10">
         <SubmitRepositoryForm />
       </div>
     </div>

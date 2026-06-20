@@ -12,4 +12,5 @@ var Module = fx.Options(
 	fx.Provide(NewOrganizationHandler),
 	fx.Provide(NewConfigHandler),
 	fx.Provide(NewUserHandler),
+	fx.Provide(NewGeneratorHandler),
 )

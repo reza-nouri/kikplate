@@ -26,6 +26,11 @@ func (l *Listener) Register(emitter *events.EventEmitter) {
 		l.emailService.SendPasswordChanged(p.Email)
 	})
 
+	emitter.On(events.PasswordResetRequested, func(payload any) {
+		p := payload.(events.PasswordResetRequestedPayload)
+		l.emailService.SendPasswordResetEmail(p.Email, p.Name, p.ResetURL)
+	})
+
 	emitter.On(events.UserLiked, func(payload any) {
 		p := payload.(events.UserLikedPayload)
 		l.emailService.SendLikeNotification(p.Email, p.LikedBy)

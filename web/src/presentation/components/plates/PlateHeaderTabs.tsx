@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from "react"
 
-type HeaderTab = "readme" | "license" | "files" | "content"
+type HeaderTab = "readme" | "license" | "files" | "schema" | "content"
 
 interface Props {
   isRepository: boolean
   hasReadme?: boolean
   hasLicense?: boolean
   hasTree?: boolean
+  hasGenerate?: boolean
 }
 
-export function PlateHeaderTabs({ isRepository, hasReadme = false, hasLicense = false, hasTree = false }: Props) {
+export function PlateHeaderTabs({ isRepository, hasReadme = false, hasLicense = false, hasTree = false, hasGenerate = false }: Props) {
   const [active, setActive] = useState<HeaderTab>(isRepository ? "readme" : "content")
 
   useEffect(() => {
@@ -25,6 +26,10 @@ export function PlateHeaderTabs({ isRepository, hasReadme = false, hasLicense = 
         setActive("files")
         return
       }
+      if (window.location.hash === "#schema" && hasGenerate) {
+        setActive("schema")
+        return
+      }
       if (window.location.hash === "#license" && hasLicense) {
         setActive("license")
         return
@@ -33,15 +38,15 @@ export function PlateHeaderTabs({ isRepository, hasReadme = false, hasLicense = 
         setActive("readme")
         return
       }
-      setActive(hasReadme ? "readme" : hasLicense ? "license" : "files")
+      setActive(hasReadme ? "readme" : hasLicense ? "license" : hasGenerate ? "schema" : "files")
     }
 
     syncFromHash()
     window.addEventListener("hashchange", syncFromHash)
     return () => window.removeEventListener("hashchange", syncFromHash)
-  }, [isRepository, hasReadme, hasLicense, hasTree])
+  }, [isRepository, hasReadme, hasLicense, hasTree, hasGenerate])
 
-  const setHashWithoutScroll = (tab: "readme" | "license" | "files") => {
+  const setHashWithoutScroll = (tab: "readme" | "license" | "files" | "schema") => {
     setActive(tab)
     const current = window.location.href.split("#")[0]
     window.history.replaceState(window.history.state, "", `${current}#${tab}`)
@@ -75,6 +80,18 @@ export function PlateHeaderTabs({ isRepository, hasReadme = false, hasLicense = 
             } disabled:cursor-not-allowed disabled:opacity-40`}
           >
             License
+          </button>
+          <button
+            type="button"
+            onClick={() => setHashWithoutScroll("schema")}
+            disabled={!hasGenerate}
+            className={`inline-flex h-10 items-center border-b-2 px-3 font-semibold transition-colors ${
+              active === "schema"
+                ? "border-foreground text-foreground"
+                : "border-transparent text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+            } disabled:cursor-not-allowed disabled:opacity-40`}
+          >
+            Schema
           </button>
           <button
             type="button"

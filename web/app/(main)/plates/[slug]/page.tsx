@@ -26,6 +26,60 @@ interface Props {
   params: Promise<{ slug: string[] }>
 }
 
+type SchemaField = {
+  type: string
+  required?: boolean
+  values?: Array<string | number>
+  default?: unknown
+  Type?: string
+  Required?: boolean
+  Values?: Array<string | number>
+  Default?: unknown
+}
+
+type ModuleDef = {
+  enabled?: boolean
+  Enabled?: boolean
+}
+
+type FileDef = {
+  path: string
+  template?: string
+  condition?: string
+}
+
+type GeneratorSchema = {
+  name: string
+  schema?: Record<string, SchemaField>
+  modules?: Record<string, ModuleDef>
+  files?: FileDef[]
+}
+
+type RawGeneratorSchema = GeneratorSchema & {
+	Name?: string
+	Schema?: Record<string, SchemaField>
+	Modules?: Record<string, ModuleDef>
+	Files?: FileDef[]
+}
+
+function stringifyValue(v: unknown): string {
+  if (typeof v === "string") return v
+  if (typeof v === "number" || typeof v === "boolean") return String(v)
+  if (v === null || v === undefined) return ""
+  return JSON.stringify(v)
+}
+
+function normalizeGeneratorSchema(raw: RawGeneratorSchema | null): GeneratorSchema | null {
+  if (!raw) return null
+
+  return {
+    name: raw.name ?? raw.Name ?? "",
+    schema: raw.schema ?? raw.Schema ?? {},
+    modules: raw.modules ?? raw.Modules ?? {},
+    files: raw.files ?? raw.Files ?? [],
+  }
+}
+
 export default async function PlateDetailPage({ params }: Props) {
   const { slug } = await params
   const rawSlug = Array.isArray(slug) ? slug.join("/") : slug
@@ -47,6 +101,45 @@ export default async function PlateDetailPage({ params }: Props) {
   }
 
   const plate = (await res.json()) as Plate
+
+  const schemaSlug = plate.slug || normalizedSlug
+  const schemaUrl = `${base}/generate/${encodeURIComponent(schemaSlug)}/schema`
+  let schemaRes = await fetch(schemaUrl, {
+    cache: "no-store",
+  })
+  if (!schemaRes.ok && token) {
+    schemaRes = await fetch(schemaUrl, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    })
+  }
+  const generatorSchema = schemaRes.ok
+    ? normalizeGeneratorSchema((await schemaRes.json()) as RawGeneratorSchema)
+    : null
+
+  const hasSchemaTab = Boolean(generatorSchema)
+  const schemaEntries = Object.entries(generatorSchema?.schema ?? {}).sort((a, b) => a[0].localeCompare(b[0]))
+  const moduleEntries = Object.entries(generatorSchema?.modules ?? {}).sort((a, b) => a[0].localeCompare(b[0]))
+  const schemaFieldRows = schemaEntries.map(([key, field]) => ({
+    key,
+    type: field.type ?? field.Type ?? "string",
+    required: field.required ?? field.Required,
+    defaultValue:
+      field.default !== undefined
+        ? stringifyValue(field.default)
+        : field.Default !== undefined
+          ? stringifyValue(field.Default)
+          : undefined,
+    values: Array.isArray(field.values)
+      ? field.values.map((value) => stringifyValue(value))
+      : Array.isArray(field.Values)
+        ? field.Values.map((value) => stringifyValue(value))
+        : undefined,
+  }))
+  const moduleRows = moduleEntries.map(([name, module]) => ({ name, enabled: module.enabled ?? module.Enabled }))
+  const generateCommand = schemaEntries.length > 0
+    ? `kik generate ${normalizedSlug} -f values.yaml --output-dir ./generated-${normalizedSlug}`
+    : undefined
 
   const relatedQs = new URLSearchParams()
   relatedQs.set("limit", "12")
@@ -103,7 +196,7 @@ export default async function PlateDetailPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
+      <header className="border-b border-border bg-background">
         <div className="container mx-auto px-4 pt-6">
           <div className="mb-5 flex items-center justify-between gap-4">
             <Link
@@ -122,6 +215,7 @@ export default async function PlateDetailPage({ params }: Props) {
                 plateId={plate.id}
                 slug={plate.slug}
                 repoUrl={plate.repo_url}
+                generateCommand={generateCommand}
               />
             </div>
           </div>
@@ -165,6 +259,7 @@ export default async function PlateDetailPage({ params }: Props) {
               hasReadme={Boolean(readme)}
               hasLicense={Boolean(license)}
               hasTree={Boolean(tree?.length)}
+              hasGenerate={hasSchemaTab}
             />
           </div>
         </div>
@@ -178,6 +273,10 @@ export default async function PlateDetailPage({ params }: Props) {
                 readme={readme}
                 license={license}
                 tree={tree}
+                schemaFields={schemaFieldRows}
+                modules={moduleRows}
+                hasGenerate={hasSchemaTab}
+                slug={plate.slug}
                 repoUrl={plate.repo_url}
                 branch={plate.branch ?? undefined}
               />
@@ -354,6 +453,7 @@ export default async function PlateDetailPage({ params }: Props) {
           plateId={plate.id}
           slug={plate.slug}
           repoUrl={plate.repo_url}
+          generateCommand={generateCommand}
           prominent
         />
         <BookmarkButtonClient

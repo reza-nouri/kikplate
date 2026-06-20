@@ -33,6 +33,8 @@ func (r AuthRoutes) Setup() {
 		router.Post("/register", r.handler.Register)
 		router.Get("/verify-email", r.handler.VerifyEmail)
 		router.Post("/login", r.handler.LoginLocal)
+		router.Post("/request-password-reset", r.handler.RequestPasswordReset)
+		router.Post("/reset-password", r.handler.ResetPassword)
 		router.Get("/{provider}/redirect", r.handler.OAuthRedirect)
 		router.Get("/{provider}/callback", r.handler.OAuthCallback)
 		router.Get("/providers", r.handler.Providers)
