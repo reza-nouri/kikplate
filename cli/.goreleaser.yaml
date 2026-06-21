@@ -51,7 +51,7 @@ homebrew_casks:
       verified: github.com/kikplate/kikplate/
     repository:
       owner: kikplate
-      name: homebrew-kik
+      name: homebrew-kikplate
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     commit_author:
@@ -67,7 +67,7 @@ scoops:
       - cli-windows-archives
     repository:
       owner: kikplate
-      name: scoop-kik
+      name: scoop-bucket
       branch: main
       token: "{{ .Env.SCOOP_BUCKET_GITHUB_TOKEN }}"
     commit_author:
